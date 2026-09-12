@@ -1,0 +1,7 @@
+﻿workspace,network,points,positions,failing,failing_fraction,passing_fraction,first_failure
+no obstacles,two-layer disk-optimal,25,1576,0,0.0,1.0,
+with obstacles,two-layer disk-optimal,25,1301,537,0.41275941583397385,0.5872405841660262,"-1720,-520"
+with obstacles,greedy shadow-filling,52,1301,30,0.023059185242121444,0.9769408147578785,"-1240,-200"
+with obstacles,"uniform hex, 600 m",79,1301,162,0.1245196003074558,0.8754803996925442,"-1480,-40"
+with obstacles,"uniform hex, 500 m",112,1301,79,0.06072252113758647,0.9392774788624135,"-1240,-120"
+with obstacles,"uniform hex, 450 m",129,1301,99,0.07609531129900077,0.9239046887009992,"-1320,-40"

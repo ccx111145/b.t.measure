@@ -1,0 +1,6 @@
+﻿census_remeasure_spread,n_episodes,full_clear_rate,clear_ratio_mean,clear_ratio_min,avg_time_mean,avg_time_std,avg_time_p50,avg_time_p90,avg_time_max,virtual_time_mean,virtual_time_p90,actions_mean,actions_max,requests_mean,requests_max,wall_total_s,wall_mean_s,unresolved_total,proven_empty_mean,wall_s
+40.0,4,1.0,1.0,1.0,2144.151127947171,376.27099700090673,1940.5208672956014,2540.923795173503,2795.1947233226424,30764.669557546244,34200.58431495085,777.0,845,779.0,847,24.282000000000153,6.070500000000038,22,0.0,28.912209510803223
+80.0,0,0.0,nan,nan,nan,0.0,nan,nan,nan,nan,nan,nan,0,nan,0,0,nan,0,nan,0.06762266159057617
+150.0,0,0.0,nan,nan,nan,0.0,nan,nan,nan,nan,nan,nan,0,nan,0,0,nan,0,nan,0.028987407684326172
+300.0,0,0.0,nan,nan,nan,0.0,nan,nan,nan,nan,nan,nan,0,nan,0,0,nan,0,nan,0.061093807220458984
+1000.0,0,0.0,nan,nan,nan,0.0,nan,nan,nan,nan,nan,nan,0,nan,0,0,nan,0,nan,0.007957696914672852

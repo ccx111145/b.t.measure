@@ -1,0 +1,108 @@
+{
+ "Ours": {
+  "clear_ratio_mean": 1.0,
+  "certified_mean": 1.0,
+  "avg_time_mean": 652.6300599287813,
+  "avg_time_std": 89.87258171733923,
+  "virtual_time_mean": 8787.338300721956,
+  "actions_mean": 528.9
+ },
+ "HomingOnly": {
+  "clear_ratio_mean": 0.10905885780885781,
+  "certified_mean": 0.0,
+  "avg_time_mean": 34902.98088363169,
+  "avg_time_std": 18087.466643527303,
+  "virtual_time_mean": 51066.15441152377,
+  "actions_mean": 2856.133333333333
+ },
+ "Lawnmower": {
+  "clear_ratio_mean": 0.22715631590631588,
+  "certified_mean": 0.0,
+  "avg_time_mean": 11170.814053037646,
+  "avg_time_std": 8766.481888511425,
+  "virtual_time_mean": 26260.5424709227,
+  "actions_mean": 563.7
+ },
+ "RandomWaypoints": {
+  "clear_ratio_mean": 0.25496392496392495,
+  "certified_mean": 0.0,
+  "avg_time_mean": 22746.801915222848,
+  "avg_time_std": 15861.390888056425,
+  "virtual_time_mean": 54471.193604243825,
+  "actions_mean": 821.7666666666667
+ },
+ "_paired_tests_vs_Ours": {
+  "HomingOnly": {
+   "clear_ratio": {
+    "n": 30,
+    "mean_diff": 0.8909411421911423,
+    "ci95": [
+     0.8555281697469198,
+     0.9254823336385837
+    ],
+    "wins": 30,
+    "losses": 0,
+    "sign_test_p": 1.862645149230957e-09
+   },
+   "avg_time": {
+    "n": 23,
+    "mean_diff": -34275.25258627174,
+    "ci95": [
+     -41472.99511170561,
+     -27058.145486800222
+    ],
+    "wins": 0,
+    "losses": 23,
+    "sign_test_p": 2.384185791015625e-07
+   }
+  },
+  "Lawnmower": {
+   "clear_ratio": {
+    "n": 30,
+    "mean_diff": 0.7728436840936842,
+    "ci95": [
+     0.7391534888722391,
+     0.8055053106615606
+    ],
+    "wins": 30,
+    "losses": 0,
+    "sign_test_p": 1.862645149230957e-09
+   },
+   "avg_time": {
+    "n": 30,
+    "mean_diff": -10518.183993108863,
+    "ci95": [
+     -14058.866211880126,
+     -7640.5336733672475
+    ],
+    "wins": 0,
+    "losses": 30,
+    "sign_test_p": 1.862645149230957e-09
+   }
+  },
+  "RandomWaypoints": {
+   "clear_ratio": {
+    "n": 30,
+    "mean_diff": 0.7450360750360752,
+    "ci95": [
+     0.6759160804473305,
+     0.8082217816905317
+    ],
+    "wins": 30,
+    "losses": 0,
+    "sign_test_p": 1.862645149230957e-09
+   },
+   "avg_time": {
+    "n": 28,
+    "mean_diff": -22094.19629915716,
+    "ci95": [
+     -27997.533411662127,
+     -16591.354898213434
+    ],
+    "wins": 0,
+    "losses": 28,
+    "sign_test_p": 7.450580596923828e-09
+   }
+  }
+ }
+}

@@ -1,0 +1,5 @@
+# Runtime dependencies.
+# NumPy and Matplotlib are the only requirements: no SciPy, no compiled
+# extensions, no network access.
+numpy>=1.24
+matplotlib>=3.7

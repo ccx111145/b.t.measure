@@ -1,0 +1,2265 @@
+% !TEX program = pdflatex
+% Elsevier elsarticle format
+% Suitable for: Robotics and Autonomous Systems / Computers & Electrical Engineering
+\documentclass[preprint,12pt,3p]{elsarticle}
+
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage{url}
+\usepackage[hidelinks,plainpages=false]{hyperref}
+\hypersetup{pageanchor=false}
+\usepackage{lineno}
+\IfFileExists{microtype.sty}{\usepackage[final]{microtype}}{}
+\emergencystretch=2em
+
+\graphicspath{{figs/}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newenvironment{bproof}{\begin{proof}}{\end{proof}}
+
+\newcommand{\conv}{\operatorname{conv}}
+\newcommand{\diam}{\operatorname{diam}}
+\newcommand{\MEC}{\operatorname{MEC}}
+\newcommand{\Rmin}{R_{\min}}
+\newcommand{\Rmax}{R_{\max}}
+\newcommand{\bA}{\mathcal{A}}
+\newcommand{\bL}{\mathcal{L}}
+\newcommand{\bP}{\mathcal{P}}
+\newcommand{\bF}{\mathcal{F}}
+\newcommand{\bE}{E}
+\newcommand{\R}{\mathbb{R}}
+
+\journal{Robotics and Autonomous Systems}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Certifiable Search and Neutralization of Radio Emitters with Unknown
+Directionality Using a Bearing-Only Mobile Sensor}
+
+\author[a]{Changxuan Cao\corref{cor1}}
+\ead{2023211904@ecut.edu.cn}
+\author[a]{Zexu Ouyang}
+\ead{2023211863@ecut.edu.cn}
+\cortext[cor1]{Corresponding author.}
+\address[a]{East China University of Technology, Nanchang, Jiangxi 330013, China}
+
+\begin{abstract}
+A mobile platform must find and neutralize an unknown number of radio-frequency emitters in a
+bounded region using only noisy bearings, and must certify that none was missed. The emitter count
+and reception radii are unknown, and an emitter may radiate into only a half-plane of unknown
+orientation, so a silent channel carries no distance information. We derive a necessary and
+sufficient condition for a network to detect an emitter of arbitrary orientation,
+$G\in\conv(S_G)$, which forces the network beyond the region. We build a certifiable search
+framework in which every channel ends cleared or proved empty, making termination decidable rather
+than a timeout, and cast network design as a covering-salesman problem with a rigorous point-count
+lower bound; a two-layer construction needs $25$ points on a route $42\%$ shorter than a
+single-layer lattice. On $200$ Monte-Carlo episodes it clears $100\%$ of emitters at
+$359.7\pm44.6$~s each; in a separate $30$-seed comparison the best of four baselines clears $51\%$
+with $12.9$ times the budget and none certifies completion in the directional scenario. Ablating
+the certificate leaves what is cleared unchanged but cuts mission time $4.8$-fold. Under multipath
+a $q$-relaxed evidence set removes the false absence certificates the hard outer approximation
+produces; sound and complete certification under $q$ outliers provably needs a detection redundancy
+$r>q$ that covering networks lack.
+\end{abstract}
+
+\begin{highlights}
+\item Detectability of orientation-unknown emitters requires enclosure, not coverage.
+\item A certifiable search framework proves completion instead of timing out.
+\item The completion certificate alone reduces mission time by a factor of 4.8.
+\item A sample-level array chain is benchmarked against the Cram\'er--Rao bound.
+\item Under multipath, antenna aperture dominates signal-to-noise ratio.
+\end{highlights}
+
+\begin{keyword}
+Bearing-only localization \sep Guaranteed search \sep Covering salesman problem \sep Directional emitters \sep Radio-frequency interference \sep Search and neutralize \sep Mobile sensors
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+
+Radio-frequency (RF) interference is a first-order operational problem in
+spectrum management, aviation safety and wireless network operation. Once a monitoring
+infrastructure has narrowed an interferer down to a region of a few kilometres, the final
+localization and the physical removal of the source are still performed by a human operator who
+walks through the area with a handheld direction finder, interprets the evolution of field
+strength and bearing, and finally locates and switches off the device. Automating this last,
+dangerous and time-consuming step with a mobile robot is the problem considered here.
+
+The task is deceptively simple to state: a mobile platform enters a bounded circular region and
+must neutralize every emitter inside it as quickly as possible. The platform carries a direction
+finder with a known angular uncertainty and a short-range optical/laser tool that can neutralize
+an emitter once the platform is within a few tens of metres of it. What makes the problem
+genuinely hard is the combination of four uncertainties.
+
+\begin{itemize}
+\item \textbf{The number of emitters is unknown.} Neither the count nor the set of active
+channels is revealed. Consequently a search cannot stop when a counter reaches a target value;
+it must stop when every possible emitter has either been neutralized or \emph{proved}
+non-existent.
+\item \textbf{No distance information.} The sensor measures bearings only. A single bearing
+constrains the emitter to a wedge but says nothing about its range, and the effective reception
+radius differs from emitter to emitter and is not reported.
+\item \textbf{Unknown directionality.} An emitter may be omni-directional or may radiate only
+into a half-plane whose orientation is unknown. In the latter case a non-detection is ambiguous:
+it may mean that no emitter exists, that the platform is beyond the reception radius, or that the
+platform lies outside the illuminated half-plane.
+\item \textbf{Absence of a distance measurement in the certificate.} Because of the previous
+point, the standard ``coverage'' argument --- if every point of the region is within reception
+range of some measurement location, no emitter can hide --- is no longer sufficient: an emitter
+may be well within range and still be invisible from a given location.
+\end{itemize}
+
+\subsection{Contributions}
+
+This paper makes the following contributions.
+
+\begin{enumerate}
+\item \textbf{A detectability condition for orientation-unknown emitters}
+(Theorem~\ref{thm:detect}). We show that a set of measurement locations detects an emitter of
+\emph{arbitrary} orientation at position $G$ if and only if $G$ lies in the convex hull of the
+measurement points that are within the (worst-case) reception radius of $G$. The condition is
+the dual of classical coverage: coverage asks for \emph{some} point nearby, whereas detection of
+an arbitrarily oriented emitter asks for points \emph{surrounding} it. A direct corollary is that
+the measurement network must extend beyond the region of interest, since an emitter on the
+boundary radiating outwards is invisible from every point inside.
+\item \textbf{A certifiable search framework} (Section~\ref{sec:method}). Every channel is driven
+to one of two terminal states: \emph{cleared} or \emph{certified absent}. Certified absence is
+obtained from the detectability condition, so the mission terminates with a proof rather than a
+timeout. Ablating the certificate leaves the number of neutralized emitters unchanged in both
+scenarios, but in S2 it increases mission time by a factor of $4.8$, because there the census
+certificate is the only available route to an absence proof (in S1 the raster path already resolves
+empty channels, so removing the certificate changes nothing).
+\item \textbf{A network design with guarantees} (Section~\ref{sec:network}). We cast the network
+design as a covering-salesman problem, prove a six-point lower bound for the omni-directional case
+and exhibit a seven-point layout that satisfies the coverage requirement, and derive a route-length
+lower bound. For the directional case we show that a two-layer construction --- a dense inner
+lattice plus a ring placed just outside the region --- satisfies the detectability condition --- analytically almost everywhere and numerically on the residual --- with $25$ points and a $17.7$~km route, $42\%$ shorter than the natural single-layer lattice.
+\item \textbf{A robustness analysis for non-ideal channels} (Section~\ref{sec:robust}). We show
+that the hard outer approximation is \emph{unsafe} once spurious bearings occur --- a $2\%$
+spurious-bearing rate produces false absence certificates --- and that a $q$-relaxed intersection
+with a separated absence path eliminates them. We further prove that sound \emph{and} complete
+absence certification under $q$ outliers requires a detection redundancy $r>q$ that the covering
+networks used here do not possess, which we state as an open network-design problem.
+\item \textbf{An experimental separation of inference from planning}
+(Section~\ref{sec:planning}). Holding the evidence sets and the certificate fixed and changing one
+planning decision at a time, we show that the inference layer decides \emph{whether} the mission
+succeeds (up to $-58\%$ when removed) while the planning layer decides \emph{how fast} (up to
+$+78\%$ when degraded), and that the two axes are independent.
+\item \textbf{A sample-level array-processing surrogate for hardware}
+(Section~\ref{sec:rf}). We replace the abstract bearing model by a complete direction-finding
+chain --- specular multipath, uniform circular array, snapshot covariance, MUSIC --- and use it to
+test the $\delta=1^\circ$ assumption rather than postulate it. The assumption holds in a
+line-of-sight channel ($99$th percentile error $0.85^\circ$ at $12$~dB) and fails under multipath;
+we further show that antenna \emph{aperture}, not integration time, is what restores it, and that
+with an adequate aperture and a calibrated $\delta$ the full method clears $100\%$ of emitters with
+zero false certificates.
+\item \textbf{An extension to obstructed workspaces} (Section~\ref{sec:obstacles}). The
+detectability condition becomes an enclosure condition over line-of-sight-reachable network points;
+a disk-optimized network fails the condition at $41\%$ of the free-space positions of an
+obstructed workspace, and greedy shadow-filling restores it to $97.7\%$ at roughly twice the
+number of points.
+\item \textbf{A thorough empirical study} (Section~\ref{sec:experiments}). We compare against four
+baselines that enjoy exactly the same information, report paired sign tests with bootstrap
+confidence intervals, ablate six components, sweep five generalization axes, and compare against
+an omniscient offline planner as a competitiveness benchmark.
+\end{enumerate}
+
+%=====================================================================
+\section{Related Work}
+
+\subsection{Bearing-only and emitter localization}
+Bearing estimation itself is a mature subject: the MUSIC subspace method of
+Schmidt~\cite{schmidt1986} and the array-processing review of Krim and
+Viberg~\cite{krim1996} are the standard references for how the angle is obtained, which we take as
+given. Bearing-only (angle-of-arrival) localization has a long history in passive surveillance;
+Torrieri~\cite{torrieri1984} established the statistical theory of passive location systems and
+Gavish and Weiss~\cite{gavish1992} analysed the accuracy of bearing-only target location, showing
+that the achievable covariance is governed by the sensor--target geometry. Bishop
+\emph{et al.}~\cite{bishop2010} derived optimality conditions for sensor--target localization
+geometries, and Mart\'inez and Bullo~\cite{martinez2006} optimized sensor placement and motion
+coordination for target tracking. These results characterize the \emph{accuracy} of an estimate
+for a \emph{known number} of targets and, crucially, they assume that the target is detected
+whenever it is within range. Our setting differs in that detection itself is uncertain because
+the radiation pattern is unknown, and in that the number of emitters is unknown, so the decision
+problem is not only ``where to measure'' but also ``when may I stop''.
+
+Recent work has advanced both halves of this problem on real platforms. Peng \emph{et al.}
+\cite{peng2024} shape the platform trajectory so as to maximise the observability of a
+bearing-only estimate while calibrating sensor bias; Kudyba \emph{et al.}~\cite{kudyba2024}
+build a radio map from an autonomous aerial drone by Bayesian optimization; and Kim
+\emph{et al.}~\cite{kim2025} localize a radio source with a Gaussian-mixture filter on a
+mobile robot. These systems estimate \emph{where} an emitter is, and how accurately, and they
+are demonstrably effective at that. What none of them provides is a statement that \emph{no}
+emitter remains, which is the question this paper is organized around.
+
+When the waveform is accessible, time-difference and frequency-difference measurements provide
+range information that bearing-only sensing lacks; the classical closed-form estimators of
+Chan and Ho~\cite{chan1994} and Ho and Xu~\cite{ho2004} are the standard tools, and
+aerial platforms are the usual carriers for such arrays. All of this work assumes that the
+emitter is received by every observing platform; none of it addresses an emitter that radiates
+into a half-plane of unknown orientation, which is the difficulty we concentrate on.
+
+\subsection{Set-membership estimation and guaranteed inference}
+\label{sec:relset}
+Our evidence set $E_c$ is a \emph{set-membership} (also called bounded-error or guaranteed)
+state estimator: rather than maintaining a probability density over the emitter position, it
+maintains the set of positions consistent with every measurement and with a hard bound on the
+measurement error. The theory of such estimators is well developed. Milanese and
+Vicino~\cite{milanese1991} gave the foundational overview for dynamic systems with set-membership
+uncertainty, and Jaulin \emph{et al.}~\cite{jaulin2001} developed interval analysis as the
+computational substrate. Because exact sets can be expensive to propagate, a large body of work
+approximates them by tractable families: parallelotopes~\cite{chisci1996}, ellipsoids and
+zonotopes~\cite{alamo2005,combastel2003}, and constrained zonotopes~\cite{scott2016}. The
+bounded-error view has recently been carried to multi-vehicle target localization under
+partial visibility: Ibenthal \emph{et al.}~\cite{ibenthal2023} localize partially hidden
+moving targets with a fleet of UAVs using bounded-error estimation. That work asks where a
+\emph{known} set of targets is; here the open question is whether any emitter remains, and it
+is the absence question --- not the estimation accuracy --- that drives the network design and
+the termination rule.
+
+Our setting differs from this literature in two respects that turn out to be essential. First,
+the update here is \emph{not} a linear measurement with bounded additive noise but a disjunctive
+sensor model \eqref{eq:sensor}: a reading either yields an angular constraint, or a
+\texttt{near} constraint, or --- for a directional emitter --- no constraint at all. The
+corresponding sets are convex cones intersected with disks and their complements, which are
+non-convex even though each individual update is convex; we therefore use a raster outer
+approximation rather than a zonotope. Second, and more importantly, the existing literature is
+concerned with the \emph{accuracy} of the estimate, whereas we are concerned with what the
+estimate certifies. A bounded set that has become empty is a proof of absence, and the whole
+mission-termination argument of Section~\ref{sec:theory} rests on that observation rather than on
+the size of the set.
+
+A second, complementary line is the placement of the measurement locations themselves so that the
+estimator is well conditioned. We address this for the second measurement in
+Theorem~\ref{thm:second}, but a related body of work optimizes the \emph{error covariance} rather
+than a feasibility set~\cite{bishop2010,martinez2006}. The distinction matters when the error is
+bounded rather than Gaussian: a geometry that is optimal for the covariance need not be the one
+that shrinks the feasible set fastest, and the latter is what determines when the clearance
+criterion of Theorem~\ref{thm:clear} can be applied.
+
+\subsection{Coverage path planning}
+Coverage path planning is surveyed by Choset~\cite{choset2001} and by Galceran and
+Carreras~\cite{galceran2013}; recent reviews cover heuristic and classical
+algorithms~\cite{tan2021} and unmanned-aerial-vehicle applications~\cite{cabreira2019}. The
+boustrophedon (lawnmower) decomposition~\cite{choset1998} is the canonical complete coverage
+strategy and is the natural baseline for our problem; the general principles are collected
+in~\cite{choset2005}. Classical coverage guarantees that every point of the workspace is visited
+within the footprint of a sensor whose detection model is \emph{isotropic}: being close is
+sufficient. Our detectability condition shows that when the source may radiate into an unknown
+half-plane, ``being close'' is not sufficient, and the network must instead \emph{enclose} every
+point. To our knowledge this enclosure condition has not been stated for emitter search.
+
+For multi-robot and target-oriented variants, Robin and Lacroix~\cite{robin2016} and Khan
+\emph{et al.}~\cite{khan2018} survey target detection and tracking, and cooperative air--ground
+surveillance was demonstrated by Grocholsky \emph{et al.}~\cite{grocholsky2006}. These works
+assume probabilistic detection models that do not provide the deterministic completeness
+certificate required here; the certificate we derive is a property of the geometry of the
+network, not of a likelihood.
+
+\subsection{Covering salesman and network design}
+The problem of choosing a shortest tour such that the union of neighbourhoods of the visited
+points covers a region is the covering salesman problem; the generalized variant was formalized by
+Golden \emph{et al.}~\cite{golden2012}. We use this formulation, add a rigorous lower bound on the
+number of points from a boundary-arc argument, and show that within the design family we consider --- a lattice plus an outer ring --- the best construction is a two-layer network rather than a single extended lattice. Bounds for covering a disk by equal circles are
+classical~\cite{nica2011,jung1901,toth1998}, and the clustering view of the same problem is the
+minimum-enclosing-circle and $k$-centre family~\cite{gonzalez1985,preparata1985}. The tour itself
+is a Euclidean travelling-salesman problem, for which the asymptotic constant we use in
+Section~\ref{sec:experiments} goes back to Beardwood, Halton and
+Hammersley~\cite{beardwood1959}; modern treatments are given by
+Applegate \emph{et al.}~\cite{applegate2006}.
+
+\subsection{Source seeking and search theory}
+When a scalar field is measurable, gradient climbing and Bayesian search strategies such as
+infotaxis~\cite{vergassola2007} are highly effective, and stochastic source-seeking laws with
+provable convergence exist when the field is smooth~\cite{azuma2012}. Search theory provides
+optimal allocation of search effort for a known prior~\cite{stone2007,koopman1980}, and the
+probabilistic-robotics view of the same problem is given by
+Thrun \emph{et al.}~\cite{thrun2005}. The recent literature continues in this direction,
+replacing hand-designed heuristics by learned policies for adaptive informative path
+planning~\cite{popovic2024}; multi-robot variants now scale to teams through deep reinforcement
+learning~\cite{vashisth2026}. The objective remains expected information gain under a prior, so
+the same observation applies. These formulations optimize an expected reward under a
+prior; they do not provide the deterministic completeness certificate required in our
+formulation. Our problem differs in two ways:
+the sensor does not return any field strength or range, only a bearing, and the requirement is a
+\emph{certificate} of completeness rather than a probabilistic statement. The related literature on guaranteed search is surveyed by Chung, Hollinger and
+Isler~\cite{chung2011}; the guarantees obtained there rest on omnidirectional sensing, in contrast
+to the half-plane emitters considered here.
+
+\subsection{Directional sensor networks}
+Coverage in directional sensor networks, where each sensor has a bounded field of view with an
+orientation, has been surveyed by Guvensan and Yilmaz~\cite{guvensan2011}. The typical question
+there is how to orient a \emph{given} set of sensors to maximize coverage. Our question is the
+inverse: given that the \emph{source} orientation is unknown and adversarial, where must the
+mobile sensor measure so that every position is detectable for every orientation?
+
+%=====================================================================
+\section{Problem Formulation}
+\label{sec:problem}
+
+\subsection{Workspace and emitters}
+The workspace $\bA=\{p\in\R^2:\|p\|\le R\}$ is a disk of radius $R=1800$~m centred at the
+origin. An unknown number $k$ of emitters is present, $k\in[k_{\min},k_{\max}]=[10,16]$. Emitter
+$i$ occupies a distinct \emph{channel} $c_i\in\{1,\dots,N_c\}$, $N_c=20$; channels do not change
+during a mission. Emitter $i$ is characterized by
+\begin{itemize}
+\item its position $G_i\in\bA$;
+\item its \emph{effective reception radius} $\rho_i\in[\Rmin,\Rmax]=[1000,1500]$~m, unknown and
+different for each emitter;
+\item its \emph{radiation pattern}: either omni-directional, or directional with an unknown
+orientation $d_i\in[0,2\pi)$ illuminating the half-plane
+$H(G_i,d_i)=\{p:(p-G_i)\cdot u(d_i)\ge0\}$, where $u(\alpha)=(\cos\alpha,\sin\alpha)$.
+\end{itemize}
+
+\subsection{Sensor model}
+\label{sec:sensor}
+When the platform measures channel $c$ at position $p$, it obtains
+\begin{equation}
+z=\begin{cases}
+\texttt{near}, & \|p-G_c\|\le r_{\mathrm{near}}\ \text{and}\ p\in H(G_c,d_c),\\
+\theta_c(p)+\varepsilon, & \|p-G_c\|\le\rho_c\ \text{and}\ p\in H(G_c,d_c),\\
+\texttt{no\_signal}, & \text{otherwise},
+\end{cases}
+\label{eq:sensor}
+\end{equation}
+where $r_{\mathrm{near}}=5$~m is a saturation radius inside which no bearing can be resolved
+(the platform may neutralize directly), and
+$\theta_c(p)=\operatorname{atan2}(G_{c,y}-p_y,\;G_{c,x}-p_x)$ is the true bearing. The measurement
+noise $\varepsilon$ is bounded, $|\varepsilon|\le\delta$, with $\delta=1^\circ$ by default. A key
+structural assumption, inherited from the physical setting, is that \emph{the error at a given
+location is deterministic}: repeating a measurement at the same point returns the same reading.
+Only moving to a different location produces an independent error. Consequently averaging
+repeated measurements at one location yields no improvement, and any localization procedure must
+exploit \emph{spatial} diversity.
+
+Note that \eqref{eq:sensor} deliberately does \emph{not} provide range. A reading of
+\texttt{no\_signal} is triply ambiguous: it can mean that channel $c$ is empty, that the platform
+is beyond $\rho_c$, or that the platform is outside the illuminated half-plane.
+
+\subsection{Motion and neutralization}
+The platform moves in straight lines at speed $v=5$~m/s. A measurement costs $t_m=5$~s plus
+$t_s=1$~s if the channel is changed. Neutralization is attempted by a short-range optical/laser
+tool: it costs $t_o=3$~s to attempt optical localization and, if an emitter of the requested
+channel is within $r_{\mathrm{clr}}=20$~m, an additional $t_c=2$~s to neutralize it. Crucially the
+neutralization succeeds \emph{irrespective of the radiation pattern}, so directionality affects
+only discovery, never removal.
+
+\subsection{Objective}
+Let $T$ denote the total mission time, i.e. the sum of travel, channel switching, measurement and
+neutralization times, and let $n$ be the number of neutralized emitters. The objective is
+\begin{equation}
+\min \; T \qquad\text{subject to}\qquad n=k\ \ \text{for every realization,}
+\label{eq:objective}
+\end{equation}
+together with the requirement that the platform terminate by its own decision. Because $k$ is
+unknown, the second constraint cannot be verified by counting; it must be established by
+exhausting the space of possibilities. This is the sense in which our method is \emph{certifiable}:
+a mission ends only when every channel is either neutralized or proved empty.
+
+\subsection{Assumptions and scope}
+(A1) No obstacles; the workspace is flat and the platform and emitters are coplanar.
+(A2) Errors at different locations are independent; errors at the same location are identical
+(see Section~\ref{sec:sensor}).
+(A3) A channel hosts at most one emitter at a time. Multiple collocated emitters sharing one
+channel are excluded from the model; Remark~\ref{rem:cochannel} states what changes if that
+assumption is dropped.
+(A4) The platform may also measure outside $\bA$; this is permitted by the application and is
+exploited in Section~\ref{sec:network}.
+(A5) A lower bound $\Rmin$ on the effective reception radius, and a bound $\delta$ on the bearing
+error, are known.
+(A6) In the baseline model every reading is truthful; Section~\ref{sec:robust} relaxes this to
+``at most $q$ spurious readings per channel'' and states what that costs.
+
+\noindent These assumptions delimit the claim we make. In particular, ``unknown
+directionality'' means \emph{omni-directional, or an ideal half-plane of unknown orientation}; it does not
+cover arbitrary lobes, polarization effects, or a source that switches itself off intermittently.
+The absence certificate of Theorem~\ref{thm:cert} is a statement about this model, and its
+validity depends on (A5) and (A6) holding.
+
+%=====================================================================
+\section{Theory}
+\label{sec:theory}
+
+\subsection{Evidence sets and conservative outer approximation}
+
+For each channel $c$ we maintain an \emph{evidence set} $E_c\subseteq\bA$, the set of positions
+that are still consistent with every reading obtained so far for that channel. The true emitter,
+if it exists, always belongs to $E_c$; this invariant is what makes the method certifiable.
+
+\begin{lemma}[Wedge constraints]
+\label{lem:wedge}
+Let $f(X;\alpha)=(X-S)\times u(\alpha)=(x-S_x)\sin\alpha-(y-S_y)\cos\alpha$. Then
+\begin{equation}
+W(S,\theta)=\{X:f(X;\theta-\delta)\le0\}\ \cap\ \{X:f(X;\theta+\delta)\ge0\}
+\label{eq:wedge}
+\end{equation}
+is exactly the closed convex cone with apex $S$, central bearing $\theta$ and half-angle
+$\delta$, i.e.\ $W(S,\theta)=\{S+t\,u(\alpha)\}$ with $t\ge0$ and
+$\alpha\in[\theta-\delta,\theta+\delta]$.
+\end{lemma}
+\begin{proof}
+For $X=S+t\,u(\beta)$ with $t>0$ we have $f(X;\alpha)=t\sin(\alpha-\beta)$. Hence
+$f(X;\theta-\delta)\le0\iff\sin(\theta-\delta-\beta)\le0\iff\beta\ge\theta-\delta$ and
+$f(X;\theta+\delta)\ge0\iff\beta\le\theta+\delta$ for $\beta$ in the relevant branch; the
+negative ray ($t<0$, i.e. $\beta=\theta+\pi$) violates the first inequality. Conversely every
+point satisfying both inequalities lies on a ray $S+t\,u(\beta)$, $t\ge0$, with
+$\beta\in[\theta-\delta,\theta+\delta]$.
+\end{proof}
+
+When a bearing reading is received, we intersect $E_c$ with $W(p,\bar\theta)$ and with the disk
+$\bar B(p,\Rmax)$; a \texttt{near} reading yields $E_c\cap\bar B(p,r_{\mathrm{near}})$; an
+omni-directional \texttt{no\_signal} reading removes the open disk $B(p,\Rmin)$, because an
+omni-directional emitter would certainly have been heard inside that radius. For a directional
+emitter \texttt{no\_signal} admits no distance inference and leaves $E_c$ unchanged. A failed
+neutralization removes $B(p,r_{\mathrm{clr}})$, which is valid for both pattern types.
+
+Because $E_c$ is represented on a $10$~m raster, all set operations are implemented as
+\emph{conservative outer approximations}: a grid cell is discarded only when the whole cell is
+provably inconsistent. The underlying primitives --- convex-hull computation, half-plane clipping
+and point-in-polygon tests --- are standard~\cite{preparata1985}. Denote by $\eta$ the
+circumradius of a cell.
+
+\begin{lemma}[Safety of the outer approximation]
+\label{lem:outer}
+If $G_c$ lies in cell $\kappa$, then $\kappa$ is never removed by any of the update rules of
+Table~\ref{tab:ops}.
+\end{lemma}
+\begin{proof}
+For each rule the cell is removed only if every point of the cell satisfies the negated
+constraint with a margin of at least $\eta$. Since $\|X-x_\kappa\|\le\eta$ for all $X$ in cell
+$\kappa$ (centre $x_\kappa$), the true position $G_c$ satisfies the constraint strictly whenever
+the cell is removed, contradicting $G_c\in\kappa$.
+\end{proof}
+
+\begin{table}[t]
+\caption{Evidence update rules ($p$ is the measurement position).}
+\label{tab:ops}
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Reading & Omni-directional & Directional \\
+\midrule
+direction ($\bar\theta$) & $E\cap W(p,\bar\theta)\cap\bar B(p,\Rmax)$ & same \\
+\texttt{near} & $E\cap\bar B(p,r_{\mathrm{near}})$ & same \\
+\texttt{no\_signal} & $E\setminus B(p,\Rmin)$ & $E$ (unchanged) \\
+failed neutralization & $E\setminus B(p,r_{\mathrm{clr}})$ & same \\
+successful neutralization & channel closed & channel closed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{theorem}[Clearance criterion]
+\label{thm:clear}
+Let $c$ be an unresolved channel with evidence set $E_c\ne\varnothing$, let $x^\ast$ be the
+centre of the minimum enclosing circle (MEC) of $E_c$, computed in linear time by the randomized
+algorithm of Welzl~\cite{welzl1991} (see also~\cite{megiddo1983}), and let
+$r^\ast=\max_{X\in E_c}\|X-x^\ast\|$. If $r^\ast\le r_{\mathrm{clr}}-\eta$ then a single
+neutralization attempt at $x^\ast$ succeeds with certainty.
+\end{theorem}
+\begin{proof}
+By Lemma~\ref{lem:outer} the true emitter $G_c$ lies in some non-removed cell $\kappa$, hence
+$\|G_c-x_\kappa\|\le\eta$ and $x_\kappa\in E_c$. Therefore
+$\|G_c-x^\ast\|\le\|G_c-x_\kappa\|+\|x_\kappa-x^\ast\|\le\eta+r^\ast\le r_{\mathrm{clr}}$, and
+neutralization succeeds because it depends only on distance, not on the radiation pattern.
+\end{proof}
+
+Theorem~\ref{thm:clear} is the operational stop criterion: it converts a hard geometric question
+(``where exactly is the emitter?'') into a decidable one (``is the MEC radius below a threshold?'').
+In the implementation we additionally use an exact polygonal representation obtained by
+intersecting the bearing wedges, which is tighter than the raster and has no $\eta$ penalty.
+
+\subsection{Placing the second measurement}
+
+Consider a single emitter about which one bearing $\theta_1$ has been obtained at $S_1$. The
+consistent set is
+$\bF_1=\bA\cap W(S_1,\theta_1)\cap\{r_{\min}\le\|X-S_1\|\le\Rmax\}$, where $r_{\min}=r_{\mathrm{near}}$
+excludes the saturated zone. A second measurement at $S_2$ is only useful if the emitter is
+\emph{certain} to be heard from $S_2$; otherwise the second reading may be an uninformative
+\texttt{no\_signal}. Writing $S_2=S_1+d\,u(\theta_1+\psi)$, the decisive quantity is
+$\max_{X\in\bF_1}\|S_2-X\|$, and it admits a closed form.
+
+\begin{theorem}[Feasible set of the second measurement; omni-directional emitter]
+\label{thm:second}
+Assume that the emitter is omni-directional, so that reception depends on distance alone; the
+directional case is discussed in Remark~\ref{rem:dirsecond}.
+With $X=S_1+r\,u(\theta_1+\beta)$, $\beta\in[-\delta,\delta]$, and $\Theta=|\psi|+\delta$,
+\begin{equation}
+\max_{X\in\bF_1}\|S_2-X\|=\sqrt{\max\{d^2+r_{\min}^2-2dr_{\min}\cos\Theta,\;
+d^2+\Rmax^2-2d\Rmax\cos\Theta\}}.
+\label{eq:maxdist}
+\end{equation}
+Imposing this quantity $\le \Rmin$ is equivalent to the two quadratic inequalities
+\begin{align}
+d^2-2\Rmax\cos\Theta\,d+(\Rmax^2-\Rmin^2)&\le0,\label{eq:c1}\\
+d^2-2r_{\min}\cos\Theta\,d+(r_{\min}^2-\Rmin^2)&\le0.\label{eq:c2}
+\end{align}
+Consequently the admissible second measurement positions form a curved rectangle
+\begin{equation}
+\bP_2=\{S_1+d\,u(\theta_1+\psi):|\psi|\le\psi_{\max},\ d\in[d_1(\psi),d_2(\psi)]\}
+\end{equation}
+where $d_{1,2}$ are the roots of \eqref{eq:c1} intersected with the upper root of \eqref{eq:c2},
+and $\psi_{\max}$ is the largest $\psi$ for which those two intervals still intersect. Note that
+the closed form $\arcsin(\Rmin/\Rmax)-\delta$, obtained from the discriminant of \eqref{eq:c1}
+alone, is only an \emph{upper bound} on $\psi_{\max}$.
+\end{theorem}
+\begin{proof}
+For fixed $\beta$ the function $r\mapsto d^2+r^2-2dr\cos(\psi-\beta)$ is convex, so its maximum
+over $[r_{\min},\Rmax]$ is attained at an endpoint. Maximizing over $\beta$ then requires
+minimizing $\cos(\psi-\beta)$, attained at the endpoint of $[-\delta,\delta]$ farthest from
+$\psi$, which gives $|\psi-\beta|=|\psi|+\delta=\Theta$ and yields \eqref{eq:maxdist}. Requiring
+the maximum to be at most $\Rmin$ gives \eqref{eq:c1}--\eqref{eq:c2}. The discriminant of
+\eqref{eq:c1} is non-negative iff $\cos^2\Theta\ge1-(\Rmin/\Rmax)^2$, i.e.
+$|\psi|\le\arcsin(\Rmin/\Rmax)-\delta$ on the small-angle branch.
+\end{proof}
+
+For the numerical values of this work ($\Rmin=1000$~m, $\Rmax=1500$~m, $\delta=1^\circ$)
+both constraints are active. At $\psi=0$ the admissible interval is
+$d\in[500.1,1005.0]$~m: the lower end comes from the intersection angle and the upper end from
+\eqref{eq:c2}, not from \eqref{eq:c1}, whose own upper root is $2499.4$~m. As $|\psi|$ grows the
+interval defined by \eqref{eq:c1} shrinks while the upper root of \eqref{eq:c2} moves only
+slightly, and the two cease to intersect at
+\begin{equation}
+\psi_{\max}=40.44^\circ,\qquad d=1003.7\ \text{m},
+\label{eq:psimax}
+\end{equation}
+where the admissible interval degenerates to a single point. Substituting the largest admissible
+radius gives $\arcsin(\Rmin/\Rmax)-\delta=40.81^\circ$, a strict upper bound that is never
+attained. The practical consequences are that the second measurement must be placed \emph{off} the
+first bearing by at most about $40^\circ$, and that its distance is bounded both from below (a
+usable intersection angle) and from above (the emitter may be close to $S_1$).
+
+
+\begin{remark}[The distance criterion is not sufficient for directional emitters]
+\label{rem:dirsecond}
+The condition $\max_{X\in\bF_1}\|S_2-X\|\le\Rmin$ guarantees reception only when reception depends
+on distance alone. For a directional emitter it does not, and no distance bound can repair this: a
+site may be arbitrarily close to the emitter and still lie outside the illuminated half-plane.
+A concrete instance in the geometry of this paper is $S_1=(0,0)$, $S_2=(600,200)$ and an emitter at
+$G=(900,0)$ with half-plane $H=\{(x,y):x+2y\le900\}$. The first measurement at $S_1$ returns a
+bearing, and $\|S_2-G\|=361$~m is well inside $\Rmin=1000$~m, yet
+$600+2\cdot200=1000>900$, so $S_2\notin H$ and no signal is received at the second site. With
+$\delta=1^\circ$ the worst-case candidate distance from $S_2$ is $928$~m, so this pair passes
+\eqref{eq:c1}--\eqref{eq:c2} comfortably: the test accepts a placement that does not work.
+
+Theorem~\ref{thm:second} must therefore be read either as a statement about omni-directional
+emitters, or as a statement about sites already known to lie in the illuminated half-plane. For
+directional emitters the distance condition is necessary but not sufficient, and measurement
+placement must instead be driven by the enclosure condition \eqref{eq:conv}; this is exactly the
+role played by the census network of Section~\ref{sec:network}.
+\end{remark}
+
+
+\begin{remark}[Co-channel emitters]
+\label{rem:cochannel}
+Assumption (A3) excludes two transmitters occupying the same channel. Relaxing it does not
+invalidate the geometry of this paper, but it does change what the bearing measurement is.
+With $m\ge2$ co-channel emitters the sampled covariance acquires $m$ significant eigenvalues, the
+MUSIC spectrum of Section~\ref{sec:rf} exhibits $m$ peaks, and a single reported bearing is no
+longer an estimator of one emitter position but a sample from a mixture. The correct object is
+then a \emph{set} of bearings per measurement, and the natural extension is to cluster the
+bearings into $m$ tracks and run one evidence set per track. Because each track carries its own
+enclosure condition, the network guarantee of Theorem~\ref{thm:detect} transfers unchanged to
+each track; what has to be re-derived is the bookkeeping, not the geometry. Two practical
+consequences are worth noting: the number of sources must be estimated rather than assumed, which
+is standard in array processing but introduces its own error mode when two emitters are closely
+spaced; and the absence certificate must be issued per track, so a channel is certified only when
+every track has been resolved. We regard co-channel operation as an orthogonal extension of the
+present model rather than a special case of it.
+\end{remark}
+
+\subsection{Detectability of orientation-unknown emitters}
+\label{sec:detect}
+
+We now state the central result. Let $\bP=\{P_1,\dots,P_m\}$ be a set of measurement locations
+(a \emph{network}) and, for a candidate position $G$, let
+$S_G=\{P\in\bP:\|P-G\|\le\Rmin\}$ be the network points within the worst-case reception radius.
+
+For a candidate position $G$ and a reception radius $\rho>0$, let
+\begin{equation}
+S_G(\rho)=\{P\in\bP:\ \|P-G\|\le\rho\}
+\label{eq:SGrho}
+\end{equation}
+be the set of network points that an emitter at $G$ with effective radius $\rho$ could reach. The
+radius is unknown but bounded, $\rho\in[\Rmin,\Rmax]$ (Section~\ref{sec:problem}), and the
+quantifier below is stated accordingly.
+
+\begin{theorem}[Detectability at a fixed reception radius]
+\label{thm:detect}
+Fix $\rho>0$ and write $S_G=S_G(\rho)$. The network detects an emitter at $G$ for \emph{every}
+orientation $d$ if and only if
+\begin{equation}
+G\in\conv(S_G(\rho)).
+\label{eq:convrho}
+\end{equation}
+\end{theorem}
+\begin{proof}
+($\Leftarrow$) Let $d$ be arbitrary and let $H=\{X:(X-G)\cdot u(d)\ge0\}$ be the illuminated
+half-plane. If no point of $S_G$ lay in $H$, then all of $S_G$ would lie in the open complementary
+half-plane, whose closure is convex and hence contains $\conv(S_G)$; this would contradict
+$G\in\conv(S_G)$ because $G$ lies on the boundary of $H$. Thus some $P\in S_G\cap H$ exists, and
+$\|P-G\|\le\rho$, so the emitter is heard from $P$ regardless of $d$.
+($\Rightarrow$) Suppose $G\notin\conv(S_G)$. By the separating hyperplane theorem there is a
+direction $d$ with $(P-G)\cdot u(d)<0$ for all $P\in S_G$, i.e. every network point within the
+reception radius lies strictly behind the emitter. Choosing this $d$ as the orientation makes the
+emitter invisible from every point of $S_G$, and points outside $S_G$ are, by definition of
+$S_G(\rho)$, beyond the reception radius $\rho$. Hence the emitter is not detected, a
+contradiction.
+\end{proof}
+
+\begin{corollary}[Uniform guarantee over the admissible radii]
+\label{cor:uniform}
+The network detects an emitter at $G$ for every orientation $d$ \emph{and every} admissible
+reception radius $\rho\in[\Rmin,\Rmax]$ if and only if
+\begin{equation}
+G\in\conv(S_G(\Rmin)).
+\label{eq:conv}
+\end{equation}
+\end{corollary}
+\begin{proof}
+Since $\rho\mapsto S_G(\rho)$ is non-decreasing, $\conv(S_G(\Rmin))\subseteq\conv(S_G(\rho))$ for
+all $\rho\ge\Rmin$, so \eqref{eq:conv} implies \eqref{eq:convrho} at every admissible radius by
+Theorem~\ref{thm:detect}. Conversely, if $G\notin\conv(S_G(\Rmin))$ then the separating direction
+constructed in the necessity part of that proof, applied at $\rho=\Rmin$, renders the emitter
+invisible at an admissible radius.
+\end{proof}
+
+\begin{remark}[Which form is used where]
+\label{rem:quantifier}
+Equation~\eqref{eq:convrho} is the exact statement for a \emph{known} radius and
+\eqref{eq:conv} is its worst-case counterpart for an \emph{unknown} one; the two coincide when
+$\rho$ is known to equal $\Rmin$. Because $\rho$ is unknown in this paper we use the worst-case
+form throughout, writing $S_G$ for $S_G(\Rmin)$. The distinction is not merely pedantic in the
+other direction: for a known $\rho>\Rmin$ the enclosure condition \eqref{eq:convrho} is strictly
+easier to satisfy than \eqref{eq:conv}, so the worst-case form is conservative, and
+Section~\ref{sec:reliability} quantifies the reliability that this conservatism buys and costs.
+\end{remark}
+
+\begin{corollary}[The network must leave the region]
+\label{cor:outside}
+If the emitter can lie on the boundary of $\bA$, then any network that satisfies
+\eqref{eq:conv} for all $G\in\bA,\ d$ must contain points outside $\bA$.
+\end{corollary}
+\begin{proof}
+Take $G$ on the boundary with outward normal $n$ and consider $d=n$. For every $P\in\bA$ we have
+$(P-G)\cdot n\le0$, with equality only if $P=G$. Hence no point of $\bA$ lies in the open
+half-plane $H(G,n)^\circ$, so $S_G$ contains no point of $H(G,n)^\circ$ and
+$G\notin\conv(S_G)$ whenever $G\notin\bP$.
+\end{proof}
+
+\begin{corollary}[Spacing]
+\label{cor:spacing}
+If \eqref{eq:conv} holds for all $G$ in a disk of radius $R$, then the largest empty circle of
+$\bP$ has radius at most $\Rmin$, i.e. the covering radius of $\bP$ does not exceed $\Rmin$.
+\end{corollary}
+\begin{proof}
+If some $G$ had $\|G-P\|>\Rmin$ for all $P$, then $S_G=\varnothing$ and $G\notin\conv(\varnothing)$,
+violating \eqref{eq:conv}.
+\end{proof}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{en_net.pdf}
+\caption{Detectability for emitters of unknown orientation. Panels (a) and (b) colour the region by whether \eqref{eq:conv} holds; the seven-point ring network that covers the region adequately for omni-directional emitters satisfies it on only about $24\%$ of the area, whereas the two-layer network satisfies it on all but a residual of measure tending to zero. The fraction is estimated by point sampling ($23.6\%$ on a $20$~m grid) and by the cell decomposition of Section~\ref{sec:network}, which converges to the same value as the mesh is refined. Panel (c) illustrates the two cases of Theorem~\ref{thm:detect} (the detectability condition):
+for $G\notin\conv(S_G)$ there is an orientation (red arrow) that illuminates no network point.}
+\label{fig:net}
+\end{figure*}
+
+Corollary~\ref{cor:spacing} shows that the classical covering condition is \emph{necessary} but,
+by Theorem~\ref{thm:detect}, not sufficient: covering only ensures $S_G\ne\varnothing$, whereas
+detection for all orientations requires that $S_G$ surrounds $G$. Fig.~\ref{fig:net} makes the gap
+concrete: the seven-point ring network that covers the region adequately for omni-directional
+emitters satisfies \eqref{eq:conv} on only about $24\%$ of the area, while the two-layer network satisfies it on all but a residual of measure tending to zero. This is the formal reason why
+the dense lattice of Section~\ref{sec:network} is needed, and why a sparse covering network that
+is perfectly adequate for omni-directional emitters fails badly when orientations are unknown.
+
+\begin{remark}
+Theorem~\ref{thm:detect} is tight and testable. In our implementation the condition is evaluated
+numerically by computing the angular gaps of $S_G$ as seen from $G$: $G\in\conv(S_G)$ holds iff
+some point of $S_G$ coincides with $G$ or the largest angular gap does not exceed $\pi$. We
+cross-validated this criterion against an independent triangle-barycentre test on $10^5$ sample
+points with zero discrepancies.
+\end{remark}
+
+\subsection{Certified absence and provable termination}
+
+\begin{theorem}[Absence certificate]
+\label{thm:cert}
+Suppose $\bP$ satisfies \eqref{eq:conv} for every $G\in\bA$. If channel $c$ has been measured at
+every point of $\bP$ and every reading was \texttt{no\_signal}, then no emitter occupies channel
+$c$.
+\end{theorem}
+\begin{proof}
+Assume an emitter exists at $G\in\bA$ with orientation $d$ and reception radius $\rho\ge\Rmin$.
+By Corollary~\ref{cor:uniform} --- equivalently Theorem~\ref{thm:detect} applied at $\rho=\Rmin$ ---
+there is $P\in\bP$ with $\|P-G\|\le\Rmin\le\rho$ and $P\in H(G,d)$, so the reading at $P$ would not have
+been \texttt{no\_signal}; contradiction.
+\end{proof}
+
+\begin{corollary}[Decidable termination]
+\label{cor:terminate}
+Let $\bP$ satisfy \eqref{eq:conv}. A mission may terminate with the guarantee that every emitter
+has been neutralized as soon as, for every channel, either a neutralization succeeded or the
+channel has been measured at all points of $\bP$ with \texttt{no\_signal} readings.
+\end{corollary}
+
+Corollary~\ref{cor:terminate} is the operational meaning of certification. Without
+Theorem~\ref{thm:cert} the platform can never distinguish ``all emitters neutralized'' from
+``some emitter not yet found'', and must keep searching until an external timeout --- a
+distinction whose cost we quantify in Section~\ref{sec:ablation}.
+
+
+\subsection{Robustness to outliers: $q$-relaxed evidence sets}
+\label{sec:robust}
+
+The developments so far assume that every reading is truthful. In a real radio channel this
+assumption fails: multipath reflections and antenna sidelobes produce \emph{spurious bearings}
+--- a \texttt{direction} reading for a channel that is not present, or a bearing far from the true
+one --- while shadowing and fading produce \emph{missed detections}. The two failure modes are not
+symmetric, and neither is their effect on the certificate.
+
+\begin{definition}[$q$-relaxed evidence set]
+\label{def:qrelax}
+For $q\in\mathbb{N}_0$, the set $E_c^{(q)}$ consists of those $X\in\bA$ that violate at most
+$q$ of the constraints accumulated for channel $c$.
+\end{definition}
+
+The rule $E\leftarrow E\cap C$ of Table~\ref{tab:ops} is the case $q=0$. For $q>0$ the update is
+implemented by maintaining a violation counter $\nu(X)$ per cell and setting
+$E^{(q)}=\{X:\nu(X)\le q\}$; this adds no asymptotic cost and no extra memory beyond one small
+integer per cell.
+
+\begin{theorem}[Robust clearance]
+\label{thm:robustclear}
+Assume that at most $q$ of the readings taken for channel $c$ are spurious. If
+$\MEC(E_c^{(q)})\le r_{\mathrm{clr}}-\eta$, then a single neutralization attempt at the centre of
+$E_c^{(q)}$ succeeds with certainty.
+\end{theorem}
+\begin{proof}
+A truthful constraint is satisfied by the true emitter position, so $G_c$ violates at most the $q$
+spurious constraints and hence $G_c\in E_c^{(q)}$. The argument of Theorem~\ref{thm:clear} then
+applies verbatim with $E_c$ replaced by $E_c^{(q)}$.
+\end{proof}
+
+Absence certification needs separate treatment. A spurious \emph{bearing} is harmless for it,
+because spurious bearings can only add detections and therefore cannot hide the detection that
+Theorem~\ref{thm:detect} guarantees; this is why the certificate of Theorem~\ref{thm:cert} is
+untouched. A \emph{missed detection}, however, can remove exactly the detection that the
+certificate relies on, and it can also shrink the raster to empty and thereby produce a
+\emph{false absence certificate}. Two consequences follow.
+
+The next theorem concerns the first of these two mechanisms only, and we make the meaning of $q$
+precise before stating it. \emph{Missed detections are treated separately in
+Section~\ref{sec:burst} and are not covered by the redundancy condition below.} The two failure
+modes enter the certificate through opposite mechanisms. A spurious \emph{positive} detection
+inflates the detection count of an otherwise empty channel, and is therefore defeated by
+redundancy: enough truthful detections out-vote the spurious ones. A missed detection, by
+contrast, removes a detection on which Theorem~\ref{thm:cert} depends, and no amount of network
+redundancy repairs it --- only repeated measurement in time can, at the cost of the probabilistic
+guarantee \eqref{eq:rounds}.
+
+\begin{theorem}[Redundancy condition for robust absence]
+\label{thm:redundancy}
+Let the network satisfy \eqref{eq:conv} and suppose that at most $q$ detections per channel are
+spurious. If in addition the network has \emph{detection redundancy}
+\begin{equation}
+r=\min_{G\in\bA,\ d}\ \bigl|\{P\in\bP:\|P-G\|\le\Rmin,\ P\in H(G,d)\}\bigr|\ >\ q,
+\label{eq:redundancy}
+\end{equation}
+then a channel that has been measured at every point of $\bP$ and for which at most $q$
+detections were recorded is certified absent.
+\end{theorem}
+\begin{proof}
+If an emitter of orientation $d$ occupies channel $c$, \eqref{eq:redundancy} guarantees at least
+$r$ network points from which it is truthfully heard, so the number of recorded detections is at
+least $r>q$, contradicting the hypothesis.
+\end{proof}
+
+\begin{proposition}[Redundancy of the proposed networks]
+\label{prop:r1}
+For the disk geometry with $R=1800$~m and $\Rmin=1000$~m, the seven-point ring network has $r=0$
+and the 25-point two-layer network has $r=1$, the minimum being attained at boundary positions
+where every network point within $\Rmin$ lies on the interior side and the outward half-plane
+therefore contains only points of the outer ring.
+\end{proposition}
+
+Proposition~\ref{prop:r1} has a practical reading that we consider important:
+\emph{the detectability condition \eqref{eq:conv} is what makes absence certifiable, but it is not
+what makes absence certifiable \textbf{robustly}}. Robustness to $q$ spurious readings requires
+$r\ge q+1$, a strictly stronger network property. In the disk geometry this is expensive: across
+the families we examined (an additional outer ring, lattices down to $700$~m spacing, and
+extended inner radii, up to $49$ points) the value $r=1$ persisted, because a boundary position
+always admits a half-plane containing only the single outermost point. Constructing a
+redundancy-$r$ network of minimum tour length is therefore an open design problem, which we state
+in Section~\ref{sec:discussion}.
+
+\begin{remark}[Implementation]
+When $q>0$ the implementation (i)~uses the $q$-relaxed intersection of
+Definition~\ref{def:qrelax}, (ii)~disables the raster-emptying path to absence, and
+(iii)~disables the distance inference from \texttt{no\_signal} for omni-directional emitters,
+because a missed detection would otherwise trim the true position. Only the census certificate of
+Theorem~\ref{thm:cert} is then accepted as a proof of absence. Sections~\ref{sec:outlier} and
+\ref{sec:discussion} quantify what this buys and what it costs.
+\end{remark}
+
+\subsection{Lower bounds for network design}
+\label{sec:bounds}
+
+Let $k=|\bP|$ and let $L(\bP)$ be the length of the shortest tour from the origin visiting all
+points of $\bP$.
+
+\begin{theorem}[Point-count lower bound]
+\label{thm:klb}
+For an omni-directional emitter with reception radius at least $\Rmin$ that may lie anywhere in
+$\bA$, any network satisfying the coverage requirement $\bA\subseteq\bigcup_i B(P_i,\Rmin)$ has
+\begin{equation}
+k\ \ge\ \left\lceil\frac{\pi}{\varphi_{\max}}\right\rceil=6,
+\qquad
+\varphi_{\max}=\arccos\!\sqrt{1-\frac{\Rmin^2}{R^2}}=\arcsin\!\frac{\Rmin}{R}=33.7^\circ .
+\label{eq:klb}
+\end{equation}
+\end{theorem}
+\begin{proof}
+The circle $\partial\bA$ must be covered. A point $P$ at distance $\rho$ from the origin whose
+disk of radius $\Rmin$ intersects $\partial\bA$ covers an arc of half-angle $\varphi(\rho)$ with
+$\cos\varphi(\rho)=(\rho^2+R^2-\Rmin^2)/(2\rho R)$. Differentiating, $\varphi$ is maximized at
+$\rho^\ast=\sqrt{R^2-\Rmin^2}$, giving
+$\cos\varphi_{\max}=(\rho^{\ast2}+R^2-\Rmin^2)/(2\rho^\ast R)=\sqrt{1-\Rmin^2/R^2}$, i.e.
+$\varphi_{\max}=\arcsin(\Rmin/R)$. For $R=1800$~m, $\Rmin=1000$~m:
+$\varphi_{\max}=33.75^\circ$, so each point covers at most $67.5^\circ$ of the boundary and
+$k\ge\lceil360/67.5\rceil=6$.
+\end{proof}
+
+\begin{theorem}[Route-length lower bound]
+\label{thm:llen}
+Any tour from the origin that visits all points of a network covering $\bA$ has
+\begin{equation}
+L(\bP)\ \ge\ \frac{\pi(R^2-\Rmin^2)}{2\Rmin}\ =\ 3519\ \text{m}
+\quad (R=1800,\ \Rmin=1000).
+\label{eq:llen}
+\end{equation}
+\end{theorem}
+\begin{proof}
+A path of length $L$ sweeps at most $2\Rmin L+\pi\Rmin^2$ units of area with disks of radius
+$\Rmin$. Covering $\bA$ of area $\pi R^2$ therefore requires
+$2\Rmin L+\pi\Rmin^2\ge\pi R^2$.
+\end{proof}
+
+Theorem~\ref{thm:klb} bounds the number of points from below by six. Whether six points actually
+suffice is a question about the covering number of the disk: writing $\varrho_n$ for the smallest
+radius with which $n$ equal circles can cover a unit disk, six points suffice if and only if
+$\varrho_6\le\Rmin/R=0.55556$. Two independent lines of evidence indicate that this fails.
+First, local searches over the natural families (six on a ring, one centre plus five, and
+asymmetric starts), with the covering radius evaluated \emph{exactly} from the Voronoi vertices
+and the boundary circle rather than from a sample grid, found \emph{no} six-centre configuration
+with covering radius below $0.5774$. This is numerical evidence about the configurations we
+searched and is \emph{not} a lower bound on $\varrho_6$; it is reported only for orientation.
+Second, the optimal covering radius for six equal circles is
+$\varrho_6=0.555905\ldots$~\cite{bezdek1983,nica2011},
+which still exceeds the threshold. Six points are therefore insufficient, seven are necessary,
+and the layout of
+Section~\ref{sec:network} attains the covering requirement with a margin of $3.1\%$
+($969$~m against $\Rmin=1000$~m).
+
+We flag two points of book-keeping. The conclusion rests on the covering-number literature and
+not on an enumeration of configurations by the authors; and the tabulated margin is thin
+($0.06\%$), so a reader who distrusts that value should read our contribution as ``seven points
+suffice for this geometry'' rather than ``seven points are optimal''. A direct, assumption-free
+proof that six points are insufficient for $\Rmin/R=0.55556$ would be welcome and is left open.
+
+
+%=====================================================================
+\section{Method}
+\label{sec:method}
+
+\subsection{Overview}
+The method has three layers. \textbf{(L1) A census network} makes one measurement on every
+unresolved channel at each network point, which detects every emitter whenever the enclosure
+condition \eqref{eq:conv} holds (Theorem~\ref{thm:detect}) and provides the evidence needed for the
+absence certificate
+(Theorem~\ref{thm:cert}). \textbf{(L2) Evidence-driven approach} moves the platform towards the
+centre of the current evidence set of a chosen channel, re-measuring on arrival. \textbf{(L3)
+Certified clearance} neutralizes a channel as soon as Theorem~\ref{thm:clear} applies, and falls
+back to a provably complete raster sweep when the evidence set cannot be shrunk further.
+
+\subsection{Network design}
+\label{sec:network}
+
+For omni-directional emitters, Corollary~\ref{cor:spacing} requires the covering radius to be at
+most $\Rmin$; for unknown orientations Theorem~\ref{thm:detect} additionally requires
+\emph{enclosure}, and Corollary~\ref{cor:outside} forces part of the network outside $\bA$. These
+requirements suggest the following optimization:
+\begin{equation}
+\min_{d,\,R_{\mathrm{in}},\,n_{\mathrm{out}},\,\rho_{\mathrm{out}}}\ L(\bP)
+\quad\text{s.t.}\quad \forall G\in\bA:\ G\in\conv(S_G),
+\quad
+\bP=\operatorname{hex}(d,R_{\mathrm{in}})\cup\operatorname{ring}(n_{\mathrm{out}},\rho_{\mathrm{out}}),
+\label{eq:netopt}
+\end{equation}
+i.e. a dense inner hexagonal lattice of nearest-neighbour spacing $d$ covering a disk of radius
+$R_{\mathrm{in}}$, plus an outer ring of $n_{\mathrm{out}}$ points at radius
+$\rho_{\mathrm{out}}$. Problem \eqref{eq:netopt} is a combinatorial optimization over four
+parameters with a convex inner problem, which we solve by exhaustive search on a grid followed by
+local refinement~\cite{boyd2004}.
+
+The intuition --- which the experiments confirm --- is that the outer ring need only be placed
+\emph{just} outside the region: it exists to enclose boundary emitters that radiate outwards. This
+is markedly more efficient than extending a single lattice far beyond the boundary. Solving
+\eqref{eq:netopt} over the four parameters yields
+$d=1000$~m, $R_{\mathrm{in}}=1800$~m ($13$ points), $n_{\mathrm{out}}=12$,
+$\rho_{\mathrm{out}}=1900$~m, i.e. $k=25$ points and a route of $17.7$~km, which is $42\%$ shorter
+than the single-layer lattice satisfying the same enclosure condition ($31$ points, $30.7$~km). We do
+not rely on a single finite-grid check. The condition \eqref{eq:conv} is certified analytically on
+all but a shrinking residual, and that residual is then evaluated numerically. A finite grid check
+alone cannot establish \eqref{eq:conv} for every point of $\bA$, so we use a \emph{conservative
+cell certificate}. For a square cell $C$ with circumradius $\eta$ define
+\begin{equation}
+S_C^-=\{P\in\bP:\ \textstyle\max_{G\in C}\|P-G\|\le\Rmin\}.
+\label{eq:Sminus}
+\end{equation}
+Since $\|P-\cdot\|$ is convex the maximum is attained at a corner of $C$, so $S_C^-$ is decided
+exactly. Every $P\in S_C^-$ lies within $\Rmin$ of \emph{every} $G\in C$, hence
+$S_C^-\subseteq S_G$ for all $G\in C$; and because $\conv(S_C^-)$ is convex while $C$ is the
+convex hull of its four corners, it suffices to test the corners:
+\begin{equation}
+C\subseteq\conv(S_C^-)\quad\Longrightarrow\quad G\in\conv(S_G)\ \ \text{for all }G\in C.
+\label{eq:cellcert}
+\end{equation}
+Note that \eqref{eq:cellcert} does not require the absence of a circle
+$\partial B(P_i,\Rmin)$ through $C$; cells that fail the test are simply subdivided.
+
+Applied to the $25$-point network with adaptive subdivision, \eqref{eq:cellcert} certifies the
+arena except for a residual of $32.8$~m$^2$ at an effective resolution of $0.63$~m and
+$9.4$~m$^2$ at $0.31$~m, against a total area of $1.018\times10^{7}$~m$^2$ --- a fraction of about
+$3\times10^{-6}$. \emph{Every} residual cell intersects some circle $\partial B(P_i,\Rmin)$; the
+uncertified set is therefore a shrinking neighbourhood of the union of $m$ circles, whose area
+tends to zero with the mesh. This residual is a limitation of the conservative certificate rather
+than evidence of a gap in the network: on it we evaluate \eqref{eq:conv} directly on a
+$21\times21$ sub-grid per cell, no point fails, and the largest angular gap found is
+$165^\circ$ against the $180^\circ$ limit, a margin of $15^\circ$. We therefore state the
+guarantee as: \emph{enclosure is proved on all of $\bA$ except a set whose measure tends to zero,
+and verified numerically on the remainder with a $15^\circ$ margin.} Closing the residual by
+partitioning along the circle arcs rather than by axis-aligned subdivision is left to future
+work. We make the logical status explicit, because the paper's
+objective is stated for every realization. The results of Section~\ref{sec:theory} are
+unconditional: they apply to \emph{any} network that satisfies \eqref{eq:conv} at every point of
+$\bA$. What is established for the specific $25$-point construction is that it satisfies
+\eqref{eq:conv} analytically on all of $\bA$ except a residual of measure tending to zero, and
+numerically --- with a $15^\circ$ margin --- on that residual. Consequently the mission-level
+guarantees of Theorems~\ref{thm:cert} and \ref{cor:terminate} are conditional, for this particular
+network, on that verification; a reader who requires the premise to be established purely
+analytically should read the $25$-point results as conditional on it. The weaker
+covering requirement needed in the omni-directional scenario is certified by the conservative test
+$\min_i\|x-P_i\|\le\Rmin-\eta$, $\eta=h\sqrt2/2$: at $h=5$~m all $405\,605$ cells pass with zero
+failures. The seven-point network certifies only about $24\%$ of the area against the stronger enclosure condition, which is precisely why it appears only in the omni-directional scenario. We note that this fraction is resolution-dependent: the cell decomposition reports $28.0\%$, $25.6\%$ and $24.5\%$ at $h=20$, $10$ and $5$~m, so it should be read as a convergent estimate rather than a mesh-specific number. For the two-layer network, direct pointwise evaluation reports $1.0000$ at every tested resolution; that numerical result is distinct from the conservative cell certificate above and should not be conflated with it.
+
+A counter-intuitive finding is that the spacing requirement is \emph{not} the one suggested by the
+Delaunay geometry. Because the circumradius of the triangles of a hexagonal lattice is
+$d/\sqrt3$, one might expect $d\le\sqrt3\Rmin\approx1732$~m to suffice in the interior. Numerically
+$d=1200$~m yields only $65.5\%$ of positions with the property \eqref{eq:conv}; the failures are
+concentrated in an annulus of radius $200$--$600$~m around each lattice point, where exactly one
+network point lies within $\Rmin$ and therefore cannot enclose $G$. Hence $d\le\Rmin$ is required.
+
+For omni-directional emitters the census network reduces to the seven-point layout of
+Section~\ref{sec:bounds}: a centre point plus a six-point ring at $\rho=1200$~m, whose covering
+radius is $969$~m and whose route is $7.2$~km.
+
+\subsection{Evidence update and clearance}
+Algorithm~\ref{alg:update} summarizes the evidence update. Two representations are maintained in
+parallel: a $10$~m raster, which can express the non-convex constraints induced by
+\texttt{no\_signal} and by failed neutralizations, and an exact convex polygon obtained by
+intersecting bearing wedges, which is tighter for the clearance test. Both are outer
+approximations, so the more permissive of the two tests is used.
+
+\begin{algorithm}[t]
+\caption{Evidence update for channel $c$}
+\label{alg:update}
+\begin{algorithmic}[1]
+\State \textbf{input} reading $z$, position $p$, channel $c$, current set $E_c$
+\If{$z$ is a bearing $\bar\theta$}
+    \State $E_c \gets E_c\cap W(p,\bar\theta)\cap \bar B(p,\Rmax)$
+\ElsIf{$z$ is \texttt{near}}
+    \State $E_c \gets E_c\cap \bar B(p,r_{\mathrm{near}})$
+\ElsIf{$z$ is \texttt{no\_signal} and channel $c$ is omni-directional}
+    \State $E_c \gets E_c\setminus B(p,\Rmin)$
+\ElsIf{$z$ is a failed neutralization}
+    \State $E_c \gets E_c\setminus B(p,r_{\mathrm{clr}})$
+\EndIf
+\State \Return $E_c$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Rolling-horizon decision}
+At each stop the platform (i) measures every unresolved channel in ascending order, which also
+minimizes channel switching, (ii) neutralizes any channel for which
+Theorem~\ref{thm:clear} applies, and (iii) otherwise selects a target as follows.
+
+\begin{itemize}
+\item If some channel has a \emph{clearable} evidence set, move to its MEC centre and neutralize.
+\item Else, if some channel has bearing evidence, step towards the centroid of its evidence set,
+with a step length capped at $400$~m; re-measure on arrival.
+\item Else, if the census is incomplete, proceed to the next census point.
+\end{itemize}
+
+Two fallbacks handle the directional case, in which \texttt{no\_signal} conveys no information and
+the evidence set can freeze. First, an \emph{adaptive probe sequence}: points are laid out inside
+the evidence set with spacing $\operatorname{clip}(\max(1.2\,\ell_{\min},\ell_{\max}/8),40,400)$~m,
+where $\ell_{\min},\ell_{\max}$ are the minor and major axes of the set obtained by principal
+component analysis, and are visited until a bearing is recovered. Spacing proportional to the
+bounding-box diagonal --- the obvious choice --- is inadequate because the set is frequently a thin
+wedge of $1500\times50$~m for which such spacing produces only two or three probes. Second, a
+\emph{provably complete raster sweep}: neutralization attempts on a grid of spacing
+$r_{\mathrm{clr}}\sqrt2=28.3$~m cover the evidence set in the sense that every point of the set is
+within $r_{\mathrm{clr}}$ of a grid point, so the sweep necessarily succeeds.
+
+\subsection{Complexity}
+Each update is $O(N_{\mathrm{cells}})$ with $N_{\mathrm{cells}}\approx10^5$ for a $10$~m raster,
+implemented as vectorized array operations; the polygon test is $O(m\log m)$ in the number of
+accumulated bearings. A mission performs $O(|\bP|\cdot N_c)$ measurements, i.e. a few hundred,
+which is negligible compared with the travel time.
+
+%=====================================================================
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Setup}
+All experiments use a discrete-event simulator that reproduces the sensor and timing model of
+Section~\ref{sec:problem} exactly; the simulator was validated against the reference
+implementation of the application programming interface and reproduces its documented timing
+example to the second. Sample sizes differ between experiments and are stated in every table caption: the headline
+S1 result uses $200$ episodes, the head-to-head comparison with the baselines uses $30$ per method,
+the ablation uses $30$ (S1) and $15$ (S2), the generalization sweeps and the stress tests use $20$,
+and the non-ideal-channel study uses $12$. Emitters are drawn uniformly in $\bA$, channels are
+drawn without replacement from $\{1,\dots,20\}$, reception radii are uniform in $[1000,1500]$~m,
+and orientations are uniform in $[0,360^\circ)$. Two scenarios are studied: \textbf{S1}
+(omni-directional) and \textbf{S2} (directional), the latter with all emitters directional unless
+stated otherwise. A mission is \emph{certified} if every channel is either neutralized or proved
+empty by Theorem~\ref{thm:cert}; missions are cut off at a virtual-time budget of $60000$~s.
+
+All statistics report paired tests between methods evaluated on identical seeds: an exact
+two-sided sign test, together with a $95\%$ bootstrap confidence interval ($2000$ resamples) of
+the mean difference.
+
+\subsection{Baselines}
+\label{sec:maincmp}
+Comparing against weak baselines would be uninformative, so all baselines are given exactly the
+same information as the proposed method --- the bearing readings, the \texttt{near} and
+\texttt{no\_signal} outcomes and the neutralization results --- and are denied only the
+bounded-error evidence-set machinery that is our contribution. The four baselines are:
+\textbf{Lawnmower}, a complete boustrophedon sweep with $1800$~m row spacing and $300$~m stop
+spacing, which homes on any channel it hears; \textbf{RandomWaypoints}, the same homing logic
+driven by $40$ random waypoints; \textbf{HomingOnly}, no census at all, which simply chases
+whichever channel it currently hears; and \textbf{GridClear}, a provably complete raster sweep of
+neutralization attempts at $28.3$~m spacing that uses no bearing information whatsoever and is
+reported analytically because its cost is two orders of magnitude larger. A sweep of the
+$1.018\times10^7$~m$^2$ region at this spacing visits $12\,727$ points per channel, costing
+$3$~s each, and requires a boustrophedon path of $359\,940$~m; the total is
+$110\,170$~s per channel and $2.2\times10^6$~s for the $20$ channels.
+
+A detail worth recording is that a naive homing law with a fixed step oscillates. With a $500$~m
+step and an emitter $660$~m away, the platform repeatedly overshoots and returns, clearing
+nothing ($0.8\%$ success in our first implementation). All baselines therefore use an adaptive
+step that is halved whenever the bearing reverses by more than $120^\circ$; this alone raises the
+\texttt{HomingOnly} success rate from $0.8\%$ to $31\%$. Reporting the fixed-step variant would
+have constituted a straw man.
+
+\noindent\textbf{Scope of the comparison.} One family of methods is deliberately not run as a
+baseline: Bayesian and information-theoretic active search, from
+infotaxis~\cite{vergassola2007} to learning-based adaptive informative path planning for
+multi-robot target mapping~\cite{popovic2024,vashisth2026}. Those methods optimise an expected information gain or detection
+probability under a \emph{prior} over emitter locations and a \emph{likelihood} model of the
+field, and they terminate on a budget or on a confidence threshold. Neither input exists here:
+the sensor returns a bounded-error bearing, or the absence of a signal, with no field strength,
+no range and no prior on the number of emitters, and the mission must terminate on a
+\emph{proof} rather than on a posterior. Running such a method would therefore compare
+termination criteria rather than search efficiency, and the $4.8$-fold effect we measure is
+precisely the value of the certificate \emph{within} our own formulation. The baselines we do
+run are representative non-certifying strategies operating under the same information, and
+\texttt{GridClear} supplies the certifying but information-free extreme.
+
+\begin{table*}[t]
+\caption{Comparison against baselines on identical seeds ($30$ episodes per method per
+scenario). All methods receive the same virtual-time budget of $60\,000$~s, which is $12.9$ times
+the time the proposed method needs in S1 and $6.8$ times in S2. \texttt{GridClear} is analytic
+rather than a budgeted run; its entries are seconds per channel, in both scenarios.}
+\label{tab:main}
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{3}{c}{Scenario S1 (omni-directional)} & \multicolumn{3}{c}{Scenario S2 (directional)} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Method & Cleared & Certified & Total time (s) & Cleared & Certified & Total time (s) \\
+\midrule
+\textbf{Proposed}   & \textbf{1.000} & \textbf{1.000} & \textbf{4637} & \textbf{1.000} & \textbf{1.000} & \textbf{8787} \\
+Lawnmower           & 0.509 & 0.000 & 35799 & 0.227 & 0.000 & 26261 \\
+RandomWaypoints     & 0.513 & 0.067 & 51993 & 0.255 & 0.000 & 54471 \\
+HomingOnly          & 0.308 & 0.000 & 55055 & 0.109 & 0.000 & 51066 \\
+\midrule
+GridClear (analytic) & 1.000 & --- & $1.10\times10^5$ & 1.000 & --- & same \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Table~\ref{tab:main} reports the main comparison. The common budget of $60\,000$~s is $12.9$
+times what the proposed method needs in S1 ($4637$~s) and $6.8$ times what it needs in S2
+($8787$~s). Even so, the strongest baseline clears $51\%$ of the emitters in S1 and $25.5\%$ in S2.
+Certification is essentially out of reach for the baselines: in S2 none of them certifies a single
+mission, and in S1 only RandomWaypoints does, in $6.7\%$ of episodes. With only coverage-based
+reasoning they cannot rule out an undetected emitter, so they run until the budget expires. The paired sign tests
+reject equality in every case ($30/30$ wins, $p<2\times10^{-9}$); the mean differences in cleared
+fraction are $+0.49$ (Lawnmower), $+0.49$ (RandomWaypoints) and $+0.69$ (HomingOnly) for S1, with
+$95\%$ confidence intervals that exclude zero by a wide margin.
+
+When the budget is reduced to $5000$~s, i.e. approximately the time the proposed method uses, the
+gap widens: the proposed method clears $98.3\%$ of emitters and certifies $80\%$ of missions, while
+the baselines clear $18.5\%$, $19.9\%$ and $25.4\%$.
+
+The analytic entry for GridClear quantifies why bearing information is indispensable. A raster
+sweep of the whole region at $28.3$~m spacing requires $12\,727$ neutralization attempts per
+channel, i.e. $38\,181$~s of actions, plus $71\,988$~s of travel, for a total of
+$110\,170$~s per channel; over $20$ channels this reaches $2.2\times10^6$~s, far beyond any
+practical budget. The proposed method replaces this brute force by a few hundred measurements.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{en_cmp.pdf}
+\caption{Cleared fraction and certified-completion rate for the proposed method and the
+baselines, under a common budget of $60\,000$~s --- $12.9$ times what the proposed method needs in
+S1 and $6.8$ times in S2.}
+\label{fig:cmp}
+\end{figure}
+
+
+\subsection{Isolating the planning contribution}
+\label{sec:planning}
+
+The baselines of Section~\ref{sec:maincmp} differ from the proposed method in every respect at
+once, and the ablation of Section~\ref{sec:ablation} removes whole components. Neither answers the more basic
+question: \emph{given the same evidence sets and the same certificate,
+how much does the planning policy itself contribute?} Table~\ref{tab:planning} answers it by
+holding the inference layer fixed and changing exactly one planning decision at a time.
+
+\begin{table}[t]
+\caption{Planning isolation. The evidence-set inference, the clearance criterion and the absence
+certificate are identical in every row; only the planning decision shown changes. Figures are
+means over $30$ (S1) and $20$ (S2) episodes. All rows clear $100\%$ of emitters and certify
+$100\%$ of missions, so the differences are purely economic.}
+\label{tab:planning}
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Planning decision & S1 time (s) & S2 time (s) \\
+\midrule
+\textbf{Proposed} (NN$+$2-opt order, nearest channel first, centroid) & \textbf{4637} & \textbf{8887} \\
+Census points in generation order & $4637$ & $11680$ \\
+Census points in random order & $5672$ & $15775$ \\
+Channels processed round-robin & $7219$ & $11504$ \\
+Channels processed largest-set-first & $7192$ & $11597$ \\
+Bounding-box centre instead of centroid & $4614$ & $8880$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three observations follow. First, the tour matters: abandoning the Euclidean tour for a random
+order costs $22\%$ in S1 and $78\%$ in S2, because the census accounts for roughly half of the
+mission. (In S1 the generation order already coincides with the tour, so that row is a control and
+changes nothing.) Second, the \emph{channel} order matters at least as much --- $+56\%$ in S1 and
+$+30\%$ in S2 --- even though it changes no geometry at all: visiting nearby emitters in one pass
+saves the repeated traversals that a round-robin policy incurs. Third, the choice of point estimate
+inside the evidence set is essentially irrelevant ($-0.5\%$), which is reassuring: the method does
+not depend on a lucky estimator, only on the set itself.
+
+The separation is therefore clean. The inference layer determines \emph{whether} the
+mission succeeds (ablation A1--A2: up to $-58\%$), whereas the planning layer determines
+\emph{how fast} it succeeds (up to $+78\%$), and the two are independent.
+
+\subsection{Ablation study}
+\label{sec:ablation}
+
+Table~\ref{tab:abl} removes one component of the method at a time. Four conclusions follow.
+
+\begin{table}[t]
+\caption{Ablation. S1: $30$ episodes; S2: $15$ episodes.}
+\label{tab:abl}
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{S1} & \multicolumn{2}{c}{S2} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Variant & Cleared & Time (s) & Cleared & Time (s) \\
+\midrule
+Full                 & \textbf{1.000} & \textbf{4637} & \textbf{1.000} & \textbf{8871} \\
+A1 no evidence set   & 0.420 & 4345 & 0.710 & 8309 \\
+A2 no MEC criterion  & 1.000 & 5703 & 0.672 & 28966 \\
+A3 no certificate    & 1.000 & 4637 & 1.000 & 42809 \\
+A4 sparse network    & ---   & ---  & 0.996 & 47430 \\
+A5 no probe sequence & 1.000 & 4646 & 0.995 & 8775 \\
+A6 no raster sweep   & 1.000 & 4637 & 0.981 & 8895 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{(i) Evidence-set inference is the performance pillar.} Replacing it by plain bearing
+following (A1) collapses the cleared fraction from $1.000$ to $0.420$ in S1 and to $0.710$ in S2.
+
+\textbf{(ii) The clearance criterion is equally important.} Without the MEC test (A2) the platform
+repeatedly attempts neutralizations that cannot succeed; the cleared fraction in S2 falls to
+$0.672$ and the mission time grows by a factor of $3.3$.
+
+\textbf{(iii) The certificate is the most distinctive contribution.} Removing it (A3) leaves the
+cleared fraction unchanged --- the same emitters are found --- but in S2 the mission time grows from
+$8871$~s to $42809$~s, a factor of $4.8$, because the platform can no longer tell that it is
+finished and searches until the budget is exhausted. In S1 the effect is null ($4637$~s with and
+without), because there the raster path already resolves empty channels and the certificate is
+redundant; the certificate matters exactly where \texttt{no\_signal} carries no distance
+information. This quantifies the value of decidability
+directly.
+
+\textbf{(iv) The two fallbacks matter only for the last percent.} The probe sequence (A5) and the
+raster sweep (A6) change the average cleared fraction by less than $2\%$, but they are exactly what
+raises the success rate and the certification rate from $98.1\%/73.3\%$ to $100\%$.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{en_gen.pdf}
+\caption{Generalization. Each panel sweeps one axis; error bars are one standard deviation.
+With the two-layer network (S2) every configuration attains a cleared fraction of $1.000$; the
+green S1 curve in the directional panel is the single-layer ring network and is discussed in the
+text.}
+\label{fig:gen}
+\end{figure*}
+
+
+\subsection{Replacing the bearing model with an array-processing chain}
+\label{sec:rf}
+
+Every result so far assumes the abstract sensor model \eqref{eq:sensor}: a bearing equal to the
+true angle plus a deterministic error bounded by $\delta=1^\circ$. That assumption is convenient
+but untested, and in a real radio channel it is exactly what fails first. We therefore replace the
+model with a complete direction-finding chain, simulated at sample level.
+
+\noindent\textbf{The chain.} A narrowband far-field model is used. The platform carries a
+uniform circular array of $M$ elements at radius $R_\lambda$ wavelengths. The channel from an
+emitter at angle $\theta_0$ consists of a line-of-sight path plus $K$ specular reflections with
+relative amplitude $\rho$, angles spread uniformly within $\pm\sigma$ and uniformly random phases.
+Snapshots $x(t)=\sum_k\alpha_k\,a(\theta_k)s(t)+n(t)$ are formed with a constant-modulus pilot at
+a prescribed SNR, the sample covariance is estimated from $N$ snapshots, and MUSIC assuming a
+single source returns the strongest spectral peak. The receiver does not know $K$; consequently a
+strong reflection can capture the peak and the reported bearing is simply wrong. The estimator is
+deterministic for a given (position, channel) pair, so the structural property discussed in
+Section~\ref{sec:problem} --- repeated measurements at one location do not help --- is preserved.
+
+\noindent\textbf{Does the $\delta=1^\circ$ assumption survive?} Table~\ref{tab:rf} reports the error
+distribution over $4000$ random geometries per configuration.
+
+\begin{table*}[t]
+\caption{Bearing error of the array chain ($4000$ trials each). The $\delta=1^\circ$ bounded-error
+assumption of the analytical model holds only in the line-of-sight case.}
+\label{tab:rf}
+\centering
+\small
+\begin{tabular}{lcccccc}
+\toprule
+Channel & $p_{50}$ & $p_{90}$ & $p_{99}$ & $>5^\circ$ & $>20^\circ$ & $>45^\circ$ \\
+\midrule
+LOS only, SNR $20$~dB                & $0.09^\circ$ & $0.22^\circ$ & $0.34^\circ$ & $0.0\%$ & $0.0\%$ & $0.0\%$ \\
+LOS only, SNR $12$~dB                & $0.22^\circ$ & $0.55^\circ$ & $0.85^\circ$ & $0.0\%$ & $0.0\%$ & $0.0\%$ \\
+$1$ multipath, $\rho=0.6$            & $4.63^\circ$ & $12.2^\circ$ & $18.9^\circ$ & $47.3\%$ & $0.4\%$ & $0.0\%$ \\
+$2$ multipath, $\rho=0.6$            & $6.90^\circ$ & $17.9^\circ$ & $52.1^\circ$ & $62.5\%$ & $7.4\%$ & $1.3\%$ \\
+$3$ multipath, $\rho=0.8$            & $10.5^\circ$ & $30.5^\circ$ & $52.1^\circ$ & $75.0\%$ & $23.9\%$ & $2.9\%$ \\
+\midrule
+$2$ multipath, $M{=}16$, $R_\lambda{=}1.0$ & $2.77^\circ$ & $8.28^\circ$ & --- & --- & $3.8\%$ & $0.0\%$ \\
+$2$ multipath, $\rho{=}0.3$, $M{=}16$, $R_\lambda{=}1.0$ & $1.22^\circ$ & $3.10^\circ$ & --- & --- & $0.0\%$ & $0.0\%$ \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The bounded-error model is \emph{empirically justified} in a line-of-sight-dominated channel: at
+$12$~dB the $99$th percentile error is $0.85^\circ$, comfortably inside $\delta=1^\circ$. With
+multipath it collapses, and the failure is qualitative rather than quantitative: $7$--$24\%$ of
+bearings are off by more than $20^\circ$ and a few percent by more than $45^\circ$. These are
+precisely the spurious bearings that Section~\ref{sec:robust} treats analytically, now generated
+by a physical model rather than postulated.
+
+\noindent\textbf{What fixes it, and what does not.} Increasing the number of snapshots from $48$ to
+$256$ barely helps ($p_{50}$ from $7.45^\circ$ to $6.98^\circ$): the error is dominated by the
+multipath \emph{bias}, not by noise, so integration does not remove it. Increasing the array
+\emph{aperture} does: a $16$-element array of radius $1.0\lambda$ reduces $p_{50}$ to
+$2.77^\circ$ and eliminates the $>45^\circ$ tail entirely. Combining aperture with a moderate
+reflection coefficient gives $p_{90}=3.1^\circ$ with no gross errors at all.
+
+\begin{table}[t]
+\caption{End-to-end runs with the array chain in place of the bearing model ($10$ episodes each,
+scenario S2). The mission succeeds exactly when the sensor resolves the multipath.}
+\label{tab:rfrun}
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+Sensor / channel & $\delta$ & Cleared & \textbf{False abs.} & Certified & Time (s) \\
+\midrule
+$M{=}8$, $R_\lambda{=}0.35$, $\rho{=}0.6$ & $5^\circ$ & $0/10$ & $74$ & $0/10$ & 28243 \\
+$M{=}16$, $R_\lambda{=}1.0$, $\rho{=}0.6$  & $5^\circ$ & $0/10$ & $32$ & $0/10$ & 17974 \\
+$M{=}16$, $R_\lambda{=}1.0$, $\rho{=}0.3$  & $3^\circ$ & $2/10$ & $4$  & $2/10$ & 11109 \\
+$\bm{M{=}16}$, $\bm{R_\lambda{=}1.0}$, $\bm{\rho{=}0.3}$ & $\bm{5^\circ}$ &
+$\bm{10/10}$ & $\bm{0}$ & $\bm{10/10}$ & $\bm{10214}$ \\
+$M{=}16$, $R_\lambda{=}1.0$, LOS only      & $5^\circ$ & $10/10$ & $0$ & $10/10$ & 10299 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:rfrun} runs the complete method against the chain. The outcome is sharply
+dichotomous: with an adequate aperture and moderate multipath the method clears every emitter,
+issues \emph{zero} false absence certificates and certifies every mission at $10214$~s ---
+within $1\%$ of the $10299$~s obtained in a pure line-of-sight channel. With
+strong multipath no configuration we tried succeeds. The relaxation of
+Section~\ref{sec:robust} does not repair it: it absorbs spurious \emph{readings}, whereas the
+false absence certificates counted here come from \emph{missed detections} --- the failure mode
+that Section~\ref{sec:robust} shows no amount of network redundancy can repair. Two design rules follow directly. The angular bound $\delta$ must be
+\emph{calibrated to the channel} --- $\delta=3^\circ$ is too tight and $\delta=5^\circ$ works, in
+agreement with the measured $p_{90}$ --- and the antenna aperture must be chosen to resolve the
+multipath, because no amount of online reasoning can compensate for a sensor that reports the
+wrong angle confidently.
+
+
+\noindent\textbf{Is the chain an unbiased, efficient implementation?} A simulation can be
+self-consistent and still wrong, and with no hardware available we use an external standard
+instead: the Cram\'er--Rao lower bound (CRLB). For a single source observed by an $M$-element
+uniform circular array of radius $R_\lambda$ wavelengths over $N$ snapshots at per-element SNR
+$\gamma$, the deterministic (Slepian--Bangs) bound is
+\begin{equation}
+\operatorname{var}(\hat\theta)\ \ge\ \frac{1}{N\,\gamma\,M\,(2\pi R_\lambda)^2},
+\label{eq:crlb}
+\end{equation}
+obtained from $\sum_m\sin^2(\theta-\phi_m)=M/2$ and $\sum_m\sin(\theta-\phi_m)=0$. Table~\ref{tab:crlb}
+compares \eqref{eq:crlb} with the RMS error of the chain over $4000$ trials.
+
+\begin{table}[t]
+\caption{The direction-finding chain against the Cram\'er--Rao lower bound, single source,
+line-of-sight. The estimator is efficient to within the $0.1^\circ$ grid on which the MUSIC
+spectrum is evaluated.}
+\label{tab:crlb}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Configuration & CRLB ($^\circ$) & Measured RMS ($^\circ$) & Ratio \\
+\midrule
+$M{=}8$, $R_\lambda{=}0.35$, $N{=}48$, $12$~dB   & $0.334$ & $0.330$ & $0.99$ \\
+$M{=}8$, $R_\lambda{=}0.35$, $N{=}48$, $20$~dB   & $0.133$ & $0.134$ & $1.01$ \\
+$M{=}8$, $R_\lambda{=}0.35$, $N{=}256$, $12$~dB  & $0.145$ & $0.149$ & $1.03$ \\
+$M{=}8$, $R_\lambda{=}1.00$, $N{=}48$, $12$~dB   & $0.117$ & $0.121$ & $1.04$ \\
+$M{=}16$, $R_\lambda{=}1.00$, $N{=}48$, $12$~dB  & $0.083$ & $0.088$ & $1.07$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The measured error tracks the bound to within $7\%$ over a factor of four in aperture and a factor
+of eight in SNR, with the small excess explained by the $0.1^\circ$ evaluation grid. The simulated
+chain therefore closely tracks the Cram\'er--Rao bound across the tested configurations, which
+provides an external consistency check on the bearing model under the assumed line-of-sight
+condition.
+
+\noindent\textbf{Parameter provenance.} Finally, none of the physical parameters above is
+arbitrary. The multipath-to-line-of-sight amplitude ratio $\rho$ used throughout
+Section~\ref{sec:rf} and \ref{sec:ghost} maps to an equivalent Rician factor through $K=20\log_{10}(1/\rho)-10\log_{10}L$, where
+$L$ is the number of specular reflections: the model of Section~\ref{sec:rf} uses $L=2$
+equal-amplitude reflections, so the multipath-to-line-of-sight \emph{power} ratio is $L\rho^2$.
+With $L=2$ the values used correspond to $K=7.4$~dB for $\rho=0.3$, $1.4$~dB for $\rho=0.6$ and
+$-1.1$~dB for $\rho=0.8$ --- from a strong line-of-sight channel to one in which the multipath
+power exceeds the direct path. Throughout the paper we therefore label the multipath level by $\Gamma_{\mathrm{mp}}=20\log_{10}(1/\rho)$, and the ordinate of Fig.~\ref{fig:reliability} uses $\Gamma_{\mathrm{mp}}$, not $K$. The values used therefore span the range from a strong line-of-sight
+(suburban, low-altitude) channel to a weak one with comparable multipath power, rather than being
+chosen to make the method look good. The antenna patterns of Table~\ref{tab:antenna} likewise use
+beamwidths and front-to-back ratios that are representative of commercially available Yagi and
+patch-array hardware rather than idealized limits. Anchoring the model to a \emph{specific},
+measured site and antenna remains future work, and is the main reason we regard the present study
+as a methodological contribution whose validity domain is stated explicitly.
+
+This experiment is the closest substitute for hardware that we can offer. It exercises the
+complete measurement chain --- propagation, array geometry, sampling, covariance estimation and
+spectral estimation --- rather than an abstract noise model, and every parameter in it is a
+physical quantity. Replacing the simulated snapshots with samples from a software-defined radio
+would leave the rest of the pipeline unchanged.
+
+\subsection{Generalization}
+
+Fig.~\ref{fig:gen} sweeps five axes. With the two-layer network every configuration attains a
+cleared fraction of $1.000$ and a certification rate of $1.000$; the visible trend is the
+amortization of the census cost, the per-emitter cost falling from $835$~s at $k=10$ to $555$~s at
+$k=16$. Sensitivity to the reception-radius distribution is below $0.2\%$ because the reasoning is
+uniformly conservative, and widening the angular error bound eightfold (from $\delta=0.25^\circ$
+to $2^\circ$) costs less than $1.5\%$ --- the practical justification for choosing $\delta$
+conservatively, as Lemma~\ref{lem:outer} requires.
+
+The most informative experiment is a controlled comparison of the two networks under an increasing
+fraction of directional emitters (Fig.~\ref{fig:dir}). With the seven-point single-layer ring
+network that is perfectly adequate for omni-directional emitters, the cleared fraction falls
+monotonically from $1.000$ to $0.783$, $0.547$, $0.328$ and finally $0.116$ as the fraction of
+directional emitters rises through $0.25$, $0.5$, $0.75$ and $1$; the certification rate drops to
+zero as soon as a single directional emitter is present. The mechanism is exactly
+Theorem~\ref{thm:detect}: the ring network does not satisfy \eqref{eq:conv} everywhere, so a
+directional emitter whose illuminated half-plane faces away from every network point is never
+heard, and its absence can never be certified. Replacing \emph{only} the network --- leaving the
+entire decision logic untouched --- restores $1.000$ for both metrics at every directional
+fraction, at a cost of $2.8\%$ ($616.7$~s to $634.2$~s per emitter). The dense two-layer network is
+thus not a conservative over-provision but the enabling condition for the guarantee.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{en_dir.pdf}
+\caption{Controlled comparison of network structures as the fraction of directional emitters
+increases, with the decision logic held fixed. The single-layer ring network that suffices for
+omni-directional emitters collapses; the two-layer dense network designed to satisfy the condition
+of Theorem~\ref{thm:detect} is insensitive.}
+\label{fig:dir}
+\end{figure*}
+
+
+\subsection{Obstacles and non-convex workspaces}
+\label{sec:obstacles}
+
+The disk geometry of Section~\ref{sec:problem} is convenient but not essential, and it is worth
+being explicit about what changes when it is dropped. The detectability condition itself is
+geometric and survives verbatim once the line-of-sight relation is made explicit:
+
+\begin{equation}
+G\in\conv(V_G),\qquad
+V_G=\{P\in\bP:\ \|P-G\|\le\Rmin,\ \mathrm{LOS}(P,G)\},
+\label{eq:visconv}
+\end{equation}
+
+where $\mathrm{LOS}(P,G)$ holds when the segment $PG$ meets no obstacle. The certificate of
+Theorem~\ref{thm:cert} then reads unchanged, with $V_G$ in place of $S_G$. The corollaries,
+however, acquire a new failure mode: an obstacle can block a direction completely, in which case
+\emph{adding network points on the blocked side is useless}. Points must be placed inside the
+shadow instead.
+
+To quantify this we take the 25-point two-layer network that satisfies \eqref{eq:conv} on the disk up to the residual characterised in Section~\ref{sec:network}, and place it in a workspace containing three rectangular obstacles (two walls and one
+block, occupying $16.7\%$ of the disk, so $83.3\%$ of it is free space). The condition is
+evaluated on the same common $80$~m grid as the comparison of Section~\ref{sec:ncbounds}, so the
+two tables are directly comparable.
+
+\begin{table}[t]
+\caption{Effect of obstacles on the detectability condition \eqref{eq:visconv}. Every row is
+evaluated identically: the fraction of free-space positions on a common $80$~m grid at which the
+exact condition holds ($1576$ positions without obstacles, $1301$ with). This is a pointwise
+evaluation on a grid, not the conservative cell certificate of Section~\ref{sec:network}; the
+control row reads $1.000$ at grid resolution while still carrying the vanishing residual
+described in Section~\ref{sec:network}.}
+\label{tab:obstacles}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Network & Points & Condition holds & First failure \\
+\midrule
+Two-layer, no obstacles (control)   & $25$ & $1.000$ & --- \\
+Two-layer, with obstacles           & $25$ & $0.587$ & $(-1720,-520)$ \\
+Greedy shadow-filling, with obstacles & $52$ & $0.977$ & $(-1240,-200)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The result is severe: once obstacles are present the disk-optimized network fails the condition at
+$41.3\%$ of the free-space positions, because a shadow removes exactly the detections that the
+enclosure argument relies on. The loss is nonetheless concentrated rather than diffuse --- the
+median failing position lies $260$~m from the nearest obstacle, against $522$~m for the positions
+that pass --- so a targeted repair recovers most of it. Starting from the failing positions we
+greedily add the candidate that makes the largest number of them satisfy \eqref{eq:visconv},
+subject to having line-of-sight to them. Twenty-seven added points raise the passing fraction to
+$0.977$; the remaining failures lie in the deepest part of the shadows, where the only remedy is to
+place a point inside the shadow itself.
+
+\noindent\textbf{Kinematic feasibility.} The analysis so far treats travel as straight-line
+displacement between network points, which is invalid once obstacles are present. We therefore
+re-plan the census tour on a \emph{visibility graph}: nodes are the network points plus the
+obstacle vertices (inflated by a $40$~m platform radius), and an edge joins two nodes that can see
+each other. The shortest collision-free path between consecutive census points is then obtained by
+Dijkstra's algorithm.
+
+Three findings follow. First, three of the $25$ points of the disk-optimal network ---
+$(500,-866)$, $(1500,-866)$ and $(-1000,0)$ in the coordinates of Fig.~\ref{fig:net} --- fall
+\emph{inside} obstacles and are physically unreachable; they must be relocated before the plan is
+executed. This is a failure mode that no purely geometric certification would catch, and it is
+worth stating explicitly: a network that is optimal for an empty workspace may be physically
+infeasible in a cluttered one. Second, on the naive straight-line ordering, two of the $22$
+segments cross an obstacle, so the straight-line assumption is not merely optimistic but
+incorrect. Third, re-routing through the visibility graph increases the census tour from
+$15\,760$~m to $18\,255$~m, a penalty of $15.8\%$, i.e. about $500$~s of the mission.
+
+For completeness, an equivalent formulation is to inflate the obstacles and connect consecutive
+waypoints by Dubins curves when a minimum turning radius is imposed; the qualitative conclusion is
+unchanged, and the $15.8\%$ penalty is a property of the obstacle geometry rather than of the
+path-planning algorithm.
+
+Two conclusions are worth recording. First, the plan is portable: the disk-optimized network is a
+usable starting point for an obstructed workspace, and repairing it is cheaper than re-optimizing
+from scratch, provided that points falling inside obstacles are relocated. Second, the repair is
+not free --- it roughly doubles the network, from $25$ to $52$ points, and therefore roughly
+doubles the census cost of Section~\ref{sec:experiments}. Whether a region with heavy occlusion is
+worth searching with one platform, or should be partitioned among several, is an application
+decision that our analysis now makes quantitative.
+
+
+\subsection{Real antenna patterns versus the ideal half-plane}
+\label{sec:antenna}
+
+The half-plane model of \eqref{eq:sensor} assumes unit gain everywhere in a $180^\circ$ sector and
+exactly zero gain elsewhere. Real directional antennas --- Yagi, patch arrays, horns --- have a
+main lobe of finite beamwidth, sidelobes, a finite back lobe and nulls. Writing $g(\psi)$ for the
+normalised voltage pattern at an angle $\psi$ from boresight, and $R_{\mathrm{ref}}$ for the
+boresight range at which the received power equals the receiver sensitivity, detection from a
+platform at $P$ occurs exactly when
+\begin{equation}
+\|P-G\|\le R_{\mathrm{ref}}\,g\bigl(\angle(u(d),P-G)\bigr),
+\label{eq:pattern}
+\end{equation}
+and the detectability condition becomes: \emph{for every boresight $d$, at least one network point
+lies in the corresponding region} \eqref{eq:pattern}. With $g$ the ideal half-plane indicator this
+reduces to $G\in\conv(S_G)$, so Theorem~\ref{thm:detect} is the special case.
+
+\begin{table}[t]
+\caption{Detectability with realistic patterns. Left: numerically verified detectability fraction
+--- the fraction of the region on which the 25-point network of Section~\ref{sec:network}
+satisfies \eqref{eq:pattern} for \emph{every} boresight. Right: hexagonal lattice spacing
+required to restore a detectability fraction of $0.999$.}
+\label{tab:antenna}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Pattern & 25-pt fraction & Required spacing & Points \\
+\midrule
+Ideal half-plane (paper baseline)        & $1.000$ & $1000$~m & $85$ \\
+Cardioid, back lobe $-20$~dB             & $1.000$ & $1000$~m & $85$ \\
+Yagi, HPBW $55^\circ$, F/B $16$~dB, SL $-13$~dB & $0.842$ & $800$~m & $97$ \\
+Yagi, HPBW $40^\circ$, F/B $20$~dB, SL $-15$~dB & $0.004$ & $800$~m & $97$ \\
+Patch array, HPBW $65^\circ$, F/B $25$~dB       & $0.013$ & $600$~m & $127$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The result, Table~\ref{tab:antenna}, is counter-intuitive and important: \emph{the ideal
+half-plane is not the worst case}. A narrow main lobe with low sidelobes is far harder to
+guarantee, because the boresight can point \emph{between} network points, whereas a half-plane at
+least satisfies the condition from any point in a $180^\circ$ arc. With the paper's 25-point
+network a realistic patch pattern satisfies it on only $1.3\%$ of the region; a Yagi with $-13$~dB
+sidelobes manages $84\%$ precisely because its sidelobes fill the angular gaps. Restoring the
+guarantee requires a $1.25$--$1.65\times$ denser network ($600$--$800$~m spacing,
+$97$--$127$ points) than the idealised model predicts.
+
+The engineering conclusion is that the idealisation in \eqref{eq:sensor} is \emph{optimistic} and
+must be corrected by the measured pattern of the actual antenna before the network is designed.
+This is a one-line substitution --- replace the indicator with $g$ --- but it changes the answer by
+a factor we now know how to compute.
+
+\subsection{Spatially correlated multipath: the coherent ghost}
+\label{sec:ghost}
+
+Section~\ref{sec:robust} models outliers as independent draws. Real multipath is not independent:
+reflections come from fixed buildings and terrain, so the spurious bearing \emph{varies smoothly as
+the platform moves and always points at the same physical location}. The consequence is
+qualitatively different and worse. Independent outliers are mutually inconsistent, so the evidence
+set cannot converge on any of them and stays near the truth. A correlated outlier set is
+\emph{mutually consistent}: the bearings agree, the evidence set converges confidently on a
+\emph{ghost}, and the platform drives to a place where nothing exists.
+
+We model this directly by replacing, with probability $p_g$, the reported bearing by the bearing
+towards a fixed virtual reflector. Table~\ref{tab:ghost} compares this with independent outliers.
+
+\begin{table}[t]
+\caption{Correlated multipath (a fixed virtual reflector) versus independent outliers, $10$
+episodes each, scenario S2. A coherent ghost is far more damaging at the same rate.}
+\label{tab:ghost}
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Perturbation & Rate & Cleared & \textbf{False abs.} & Certified \\
+\midrule
+None                        & ---   & $10/10$ & $0$   & $10/10$ \\
+Independent outliers        & $0.30$ & $10/10$ & $0$   & $10/10$ \\
+\textbf{Coherent ghost}     & $0.30$ & $\bm{0/10}$ & $\bm{44}$ & $0/10$ \\
+Coherent ghost              & $0.70$ & $0/10$ & $82$  & $0/10$ \\
+Coherent ghost              & $1.00$ & $0/10$ & $100$ & $0/10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A ghost rate of $0.3$ already destroys the mission, whereas independent outliers at the same rate
+are harmless. We then tested three defences, all of which follow from the same idea --- that a
+\emph{failed} clearance is physical evidence contradicting the evidence set: the validation gate of
+Section~\ref{sec:robust}, adaptive relaxation of $q$ with reconstruction, and rejection of the
+bearing cluster that voted for the refuted position. All three reduce the number of false absence
+certificates somewhat ($44\to37$ at $p_g=0.3$) and \emph{none} restores the cleared fraction
+($0/10$ in every configuration we tried).
+
+We report this as a negative result and draw the honest conclusion: \textbf{the
+$q$-relaxed framework is structurally inadequate for spatially correlated multipath}, because its
+central assumption --- that outliers disagree with each other and with the truth --- is exactly
+what correlated multipath violates. What is required is an architecture that maintains several
+source \emph{hypotheses} and resolves them by visiting them, rather than a single evidence set that
+is relaxed when contradicted. We regard this as the most important open problem raised by this
+work.
+
+\subsection{Intermittent and moving emitters}
+\label{sec:burst}
+
+The certificate rests on a determinism assumption: if an emitter is within range and inside its
+illuminated half-plane, it \emph{is} heard. Frequency hopping and burst transmission violate this
+directly --- a \texttt{no\_signal} reading may mean ``transmitting elsewhere'' or ``not
+transmitting now'' rather than ``not present''. We model a duty cycle $p_{\mathrm{on}}$ and report
+the consequences in Table~\ref{tab:duty}.
+
+\begin{table}[t]
+\caption{Duty cycle: intermittent transmission breaks the absence certificate. $10$ episodes each,
+scenario S2.}
+\label{tab:duty}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Duty cycle $p_{\mathrm{on}}$ & Cleared & \textbf{False abs.} & Certified \\
+\midrule
+$1.0$ (continuous) & $10/10$ & $0$  & $10/10$ \\
+$0.7$              & $5/10$  & $7$  & $5/10$ \\
+$0.4$              & $0/10$  & $36$ & $0/10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A duty cycle of $0.7$ already produces false absence certificates. The certificate is
+deterministic only under continuous transmission, and there is no way to repair this within the
+present framework: a source that is silent half the time is observationally equivalent to a
+source that is absent, and the certificate cannot distinguish them from a single pass.
+
+The only sound remedy is redundancy in time. If the census is repeated $R$ rounds, each round
+occupying a different transmission slot, then a present emitter is missed in all $R$ rounds with
+probability at most $(1-p_{\mathrm{on}})^R$ (for independent slots), so
+\begin{equation}
+\Pr[\text{false absence}]\ \le\ (1-p_{\mathrm{on}})^R .
+\label{eq:rounds}
+\end{equation}
+This is a \emph{probabilistic} statement, not a proof, and it must be reported as such: the
+guarantee degrades from ``certified absent'' to ``absent with confidence $1-(1-p_{\mathrm{on}})^R$''.
+For $p_{\mathrm{on}}=0.4$, $R=6$ gives $4.7\%$ and $R=10$ gives $0.6\%$, at a cost of $R$ times
+the census travel. Moving emitters are worse still: without a bound on emitter speed there is no
+valid certificate at all, because the region swept at the start of the mission may already be
+stale at the end. A speed bound converts this into a tracking problem in which the certificate
+must be re-established over a sliding window, which we leave open.
+
+
+\subsection{Lower bounds for obstructed workspaces}
+\label{sec:ncbounds}
+
+Section~\ref{sec:obstacles} showed how to \emph{repair} a network for an obstructed workspace but
+left open whether the repair is anywhere near necessary. We close part of that gap here, and are
+explicit about the part that remains open.
+
+Throughout, $W\subseteq\bA$ is the free space, $\partial W$ its boundary, $A_{\mathrm{free}}$ its
+area, and $V_G=\{P\in\bP:\|P-G\|\le\Rmin,\ \mathrm{LOS}(P,G)\}$ as in \eqref{eq:visconv}.
+
+\begin{theorem}[Occlusion cannot weaken the arc bound]
+\label{thm:ncarc}
+Let $\varphi_{\mathrm{vis}}=\max_{P\in W}\varphi_{\mathrm{vis}}(P)$, where
+$\varphi_{\mathrm{vis}}(P)$ is the half-angle of the longest arc of the outer boundary
+$\partial\bA$ that is simultaneously within $\Rmin$ of $P$ and visible from $P$. Then
+\begin{equation}
+k\ \ge\ \left\lceil\frac{\pi}{\varphi_{\mathrm{vis}}}\right\rceil
+\ \ge\ \left\lceil\frac{\pi}{\varphi_{\max}}\right\rceil=6,
+\qquad \varphi_{\max}=\arcsin(\Rmin/R).
+\label{eq:ncarc}
+\end{equation}
+\end{theorem}
+\begin{bproof}
+Every point of $\partial\bA$ is a candidate emitter position and must be detectable. A network
+point can only serve those outer-boundary positions that are both within $\Rmin$ and visible;
+inserting obstacles can only remove candidates, so $\varphi_{\mathrm{vis}}(P)\le\varphi_{\max}$
+for every $P$, with equality in the unobstructed case. Since the served arcs must cover the whole
+circle, $k\varphi_{\mathrm{vis}}\ge\pi$.
+\end{bproof}
+
+Obstacles therefore \emph{monotonically strengthen} the bound of Theorem~\ref{thm:klb}; they can
+never relax it. Evaluating \eqref{eq:ncarc} on the three-obstacle workspace gives the unobstructed
+half-angle $\varphi_{\mathrm{vis}}=33.75^\circ$ --- a full visible arc of $67.5^\circ$ ---
+i.e. $k\ge\lceil180/33.75\rceil=6$, unchanged --- the obstacles are placed far
+enough from the outer boundary not to occlude it. Placing an obstacle against the boundary, or
+adding a second outer shell, would raise the bound immediately.
+
+\begin{theorem}[Route-length bound for arbitrary $W$]
+\label{thm:nclen}
+Any tour that makes every point of $W$ detectable --- in particular any tour visiting a network
+satisfying \eqref{eq:visconv} --- has
+\begin{equation}
+L\ \ge\ \frac{A_{\mathrm{free}}-\pi\Rmin^2}{2\Rmin}.
+\label{eq:nclen}
+\end{equation}
+\end{theorem}
+\begin{bproof}
+By Corollary~\ref{cor:spacing} the network covers $W$ in the sense that every point of $W$ lies
+within $\Rmin$ of some network point, so the tour sweeps $W$ with disks of radius $\Rmin$. A path
+of length $L$ sweeps at most $2\Rmin L+\pi\Rmin^2$ of area; equating this with
+$A_{\mathrm{free}}$ gives \eqref{eq:nclen}. Obstacles reduce $A_{\mathrm{free}}$ and therefore
+\emph{weaken} this particular bound, which is why it is stated in terms of the free area.
+\end{bproof}
+
+For the obstructed workspace of Section~\ref{sec:obstacles},
+$A_{\mathrm{free}}=8.48\times10^6$~m$^2$ ($83.3\%$ of the disk) and
+\eqref{eq:nclen} gives $L\ge2697$~m.
+
+\noindent\textbf{A counting estimate, and why it is not a bound.} It is tempting to add a third
+bound by arguing that enclosure requires three points and hence
+$k\ge\lceil 3N/s^\ast\rceil$, where $N$ is the number of cells and $s^\ast$ the largest number of
+cells a single point can serve. \emph{This is not valid, and we record it only to explain why we do
+not use it.} Enclosure does not require three points: if $G$ lies on the segment joining two
+network points, or coincides with one, then $G\in\conv(S_G)$ already holds with two points or with
+one. The configurations that must be excluded form the zero-measure locus swept out by the
+segments joining pairs of network points, so a rigorous version would need an almost-everywhere
+argument and an area integral rather than a count of cell centres. Evaluated as stated on an
+$80$~m partition of the obstructed workspace ($N=1301$, $s^\ast=474$) the expression suggests
+$k\gtrsim9$; we report this as an order-of-magnitude indication only.
+
+\noindent\textbf{What these bounds do and do not settle.} The two rigorous bounds above apply to any workspace, but they are \emph{weak}: against the constructive solution of
+Section~\ref{sec:obstacles} ($52$ points, a $30$~km route) they leave gaps of factors $5.8$ and
+$11$. The reason is structural rather than technical, and worth stating plainly. Counting arguments of that form: they compare a total demand against the largest
+per-point supply, and they are tight only when the binding constraint is \emph{how much} a point
+can serve. In this problem the binding constraint is \emph{in which directions} it can serve:
+enclosure fails not because too few points are nearby but because the nearby points happen to lie
+in a common half-plane. No argument that counts incidences can see this, which is why the
+covering-type bounds of Section~\ref{sec:bounds} were tight in the convex case (where a single
+arc-length count is essentially the whole story) and are loose here.
+
+Closing the gap requires an \emph{angular} relaxation --- for instance a linear program over
+candidate points with one constraint per (cell, direction) pair, whose dual would expose the
+angular bottlenecks that our counting bound averages away. We regard this, together with the
+correlated-multipath problem of Section~\ref{sec:ghost}, as the two clearly identified open
+problems of this work.
+
+One quantitative conclusion does survive, and it is favourable to the repair strategy. On the
+common evaluation grid of $1301$ free-space positions --- the same evaluation as
+Table~\ref{tab:obstacles}, so the two tables are complementary by construction --- the comparison
+is:
+
+\begin{center}
+\small
+\begin{tabular}{lcc}
+\toprule
+Network & Points & Positions failing \\
+\midrule
+Disk-optimal two-layer              & $25$  & $41.3\%$ \\
+Disk-optimal $+$ greedy repair      & $52$  & $\bm{2.3\%}$ \\
+Uniform hexagonal lattice, $600$~m  & $79$  & $12.45\%$ \\
+Uniform hexagonal lattice, $500$~m  & $112$ & $6.07\%$ \\
+Uniform hexagonal lattice, $450$~m  & $129$ & $7.61\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The greedy repair is thus substantially more efficient \emph{per point} than the best uniform
+lattice we could find: $52$ targeted points outperform $112$ uniform ones. Refining a uniform
+lattice is moreover not monotone --- $129$ points at $450$~m spacing do \emph{worse} than $112$ at
+$500$~m, because a change of phase moves the points relative to the shadows --- which is precisely
+the effect a uniform construction cannot control and a greedy one can. This justifies the repair
+as a practical answer even though it is not optimal.
+
+The only rigorous point-count result is the lower bound $k\ge6$. The counting estimate suggests a
+practical scale nearer $9$, and our $52$-point repair attains $97.7\%$ of the workspace under the
+evaluation of Table~\ref{tab:obstacles}. We therefore do \emph{not} claim a rigorous upper bound
+on the number of points needed for exact full-workspace certification: the constructive end is a
+sufficient design, not a proven minimum. The gap between the two is itself the honest measure of
+how much of the non-convex problem remains open, and closing it requires the angular relaxation
+described above.
+
+
+\subsection{Certificate reliability as a function of the sensing chain}
+\label{sec:reliability}
+
+The results so far answer the question a designer of the \emph{method} asks: does the strategy
+work? This section answers the question a designer of the \emph{sensor} asks, which is the one that
+determines whether the certificate can be trusted at all: \emph{given a channel and a direction
+finder, what is the probability that the certificate is wrong?} We sweep the two parameters that
+characterise the sensing chain --- the aperture $M R_\lambda$ and the per-path multipath level $\Gamma_{\mathrm{mp}}=20\log_{10}(1/\rho)$ (see the parameter-provenance paragraph below for its relation to the Rician $K$-factor) --- together with the
+per-element SNR and the transmitter duty cycle, and record two quantities: the \emph{false
+certificate rate}, i.e. the fraction of emitters wrongly certified absent, which is the only
+irrecoverable error, and the \emph{certified-completion rate}, i.e. the fraction of missions that
+terminate with a proof. Each cell is $20$ episodes of scenario S2.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{reliability_map.pdf}
+\caption{Reliability of the certificate as a function of the sensing chain. (a)~False-certificate
+rate over the (aperture, multipath-level $\Gamma_{\mathrm{mp}}=20\log_{10}(1/\rho)$) plane; the dashed line is the $1\%$ contour. (b)~The
+complementary certified-completion rate. (c)~Dependence on per-element SNR at five apertures;
+note the near-flatness. (d)~Dependence on the transmitter duty cycle.}
+\label{fig:reliability}
+\end{figure*}
+
+\begin{table}[t]
+\caption{Selected operating points from Fig.~\ref{fig:reliability}a--b. A certificate worth
+trusting requires both a low false-certificate rate and a non-negligible certified-completion rate;
+the two conditions together define a frontier, not a point.}
+\label{tab:reliability}
+\centering
+\small
+\begin{tabular}{cccc}
+\toprule
+Aperture $MR_\lambda$ & $\Gamma_{\mathrm{mp}}$ (dB) & False cert. & Certified \\
+\midrule
+$2.8$  & $3$  & $0.60$ & $0.00$ \\
+$4.8$  & $7$  & $0.28$ & $0.00$ \\
+$14.4$ & $7$  & $0.07$ & $0.10$ \\
+$14.4$ & $9$  & $0.02$ & $0.65$ \\
+$19.2$ & $7$  & $0.01$ & $0.90$ \\
+$19.2$ & $9$  & $0.00$ & $1.00$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three conclusions emerge, and the second is the one we consider most useful.
+
+\noindent\textbf{(i) Reliability has a frontier, and it is sharp.} The $1\%$ contour in
+Fig.~\ref{fig:reliability}a runs diagonally: a certificate that is reliable in a strong
+line-of-sight channel becomes worthless in a channel with comparable multipath power unless the
+aperture is increased. At $\Gamma_{\mathrm{mp}}=7$~dB (equivalently $K\approx4$~dB), moving from an aperture of $4.8$ to $19.2$ reduces the false-certificate rate from $0.28$ to $0.01$; at $\Gamma_{\mathrm{mp}}=3$~dB (equivalently $K\approx0$~dB) no aperture we tested is safe.
+
+\noindent\textbf{(ii) SNR is not the control variable.} Fig.~\ref{fig:reliability}c is, to our
+knowledge, the most practically useful panel of this paper. Raising the per-element SNR from $6$ to
+$20$~dB --- more than a factor of six in power --- leaves the false-certificate rate essentially
+unchanged at apertures of $1.6$, $2.8$ and $4.8$, because the bearing error is dominated by
+multipath \emph{bias} rather than by noise. Only aperture moves the frontier. The design implication
+is direct and, we suspect, counter-intuitive to practitioners accustomed to buying sensitivity:
+\emph{integrate longer is not the answer; make the array bigger is.}
+
+\noindent\textbf{(iii) Intermittent transmission is a separate, steeper axis.}
+Fig.~\ref{fig:reliability}d shows the duty cycle acting on the certificate independently of the
+array: at an aperture of $19.2$ and $\Gamma_{\mathrm{mp}}=7$~dB, where continuous transmission gives a $0.7\%$
+false-certificate rate and $90\%$ certified completion, a duty cycle of $0.4$ degrades these to
+$25\%$ and $0\%$. No antenna can recover this, because the information is simply absent from the
+measurements; only time redundancy can, at the cost of the probabilistic degradation
+\eqref{eq:rounds}.
+
+Together, Fig.~\ref{fig:reliability} converts the paper's central claim from a binary statement
+into a design procedure: choose the aperture that places the operating point inside the $1\%$
+contour for the channel in which the system will actually be deployed, verify the duty cycle
+against \eqref{eq:rounds}, and only then trust the certificate. We regard this map --- rather than
+any single number in the tables above --- as the most transferable result of the paper.
+
+\subsection{Competitiveness against an omniscient planner}
+
+To put the cost in perspective we compare against an \emph{omniscient reference plan} that knows
+all emitter positions in advance and therefore needs no measurements at all: its cost is the open
+travelling-salesman tour through the true emitter positions divided by the speed, plus the fixed
+neutralization time.
+
+Two remarks on how this quantity may be read. First, it is an \emph{upper} bound on the cost of an
+optimal omniscient plan, not a lower bound on the cost of an arbitrary strategy: an omniscient
+planner needs only to enter the $r_{\mathrm{clr}}=20$~m neighbourhood of each emitter, so it can
+beat the tour through the exact centres. Consequently the ratio we report is a \emph{lower} bound
+on the true price of not knowing the emitter positions, and the true gap is at least as large.
+Second, the comparison remains informative because the reference plan is a concrete, achievable
+omniscient strategy rather than an abstract bound.
+
+The proposed method requires $2.43\pm0.24$ times the reference cost in S1 and $4.68\pm0.62$ in S2. The excess is entirely the price
+of discovery --- $58\%$ of the mission in S1 and $78\%$ in S2 --- which is consistent with the
+observation that removal itself is cheap ($5$~s per emitter) while acquiring the information
+needed to locate the emitters dominates the budget.
+
+
+\subsection{Behaviour under non-ideal channels}
+\label{sec:outlier}
+
+To probe the concern that motivates Section~\ref{sec:robust}, we augment the sensor model with two
+impairments of a real radio channel: a \emph{spurious bearing} with probability $p_{\mathrm{out}}$
+(a \texttt{no\_signal} outcome is replaced by a \texttt{direction} reading at a random angle, as
+multipath and sidelobes would produce) and a \emph{missed detection} with probability
+$p_{\mathrm{miss}}$ (a detection is replaced by \texttt{no\_signal}, as shadowing would produce).
+Both are generated by deterministic per-position, per-channel streams so that episodes remain
+reproducible. Table~\ref{tab:outlier} reports $12$ episodes of scenario S2 for each combination of
+$p_{\mathrm{out}}$ and the relaxation parameter $q$, with $p_{\mathrm{miss}}=0$.
+
+\begin{table}[t]
+\caption{Non-ideal channels. Each row is $12$ episodes; \emph{false absence} counts emitters that
+were wrongly certified absent, which is the only unrecoverable error.}
+\label{tab:outlier}
+\centering
+\small
+\begin{tabular}{cccccc}
+\toprule
+$p_{\mathrm{out}}$ & $q$ & Cleared & \textbf{False absence} & Certified & Time (s) \\
+\midrule
+$0.00$ & 0 & 1.000 & 0 & 1.000 & 9044 \\
+$0.02$ & 0 & 0.000 & \textbf{79} & 0.000 & 9115 \\
+$0.05$ & 0 & 0.000 & \textbf{115} & 0.000 & 8381 \\
+$0.10$ & 0 & 0.000 & \textbf{158} & 0.000 & 5938 \\
+\midrule
+$0.00$ & 2 & 0.917 & 0 & 0.917 & 15723 \\
+$0.02$ & 2 & 0.167 & \textbf{0} & 0.000 & 23254 \\
+$0.05$ & 2 & 0.000 & \textbf{0} & 0.000 & 21501 \\
+$0.10$ & 2 & 0.000 & \textbf{0} & 0.000 & 16713 \\
+\midrule
+$0.00$ & 4 & 0.750 & 0 & 0.750 & 33809 \\
+$0.02$ & 4 & 0.833 & \textbf{0} & 0.000 & 44982 \\
+$0.05$ & 4 & 0.417 & \textbf{0} & 0.000 & 41434 \\
+$0.10$ & 4 & 0.250 & \textbf{0} & 0.000 & 34439 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three results stand out. First, the \emph{hard} outer approximation ($q=0$) is not merely
+degraded but unsafe: a spurious-bearing rate of only $2\%$ already produces $79$ false absence
+certificates and drives the cleared fraction to zero. This is the dominant failure mode of a certifying
+system, and it is invisible in an ideal-channel evaluation.
+Second, separating the two absence paths and using the $q$-relaxed intersection removes the error
+completely: at $q\ge2$ the number of false absence certificates is zero at every impairment level
+we tested. Correctness is restored. Third, and less comfortably, completeness is not: the
+certification rate collapses to zero, because with spurious bearings no channel ever satisfies the
+zero-detection condition of Theorem~\ref{thm:cert}, and by
+Proposition~\ref{prop:r1} the networks we use cannot invoke the redundancy condition of
+Theorem~\ref{thm:redundancy}. The mission remains \emph{safe} but no longer \emph{decidable}.
+
+The practical conclusion is a design rule rather than an algorithmic one: if spurious readings
+are expected, the network must be built with detection redundancy $r\ge q+1$ \emph{before} the
+mission, because no amount of online reasoning can recover a guarantee that the geometry does not
+provide. Together with the results of Section~\ref{sec:ablation}, this defines a clear
+safety--efficiency frontier: the certificate is what makes the mission terminate early (a factor of
+$4.8$), the relaxation is what makes it correct under outliers, and the redundancy $r$ is what
+makes it complete again --- at a cost in network density that we have not yet optimized.
+
+\subsection{Robustness}
+Three additional stress tests were performed. Changing the quantization scale that defines
+``the same location'' for the deterministic error from $0.1$~m to $10$~m changes the per-emitter
+cost by at most $0.8\%$ in S1 and $0.1\%$ in S2, confirming that no conclusion depends on this
+modelling choice. Imposing a minimum separation of $50$~m between emitters changes the cost by
+$0.3\%$. Finally, forcing every reception radius to the worst case of $1000$~m increases the S1
+cost from $370.5$~s to $399.5$~s ($+7.8\%$), in line with the conservative use of $\Rmin$
+throughout.
+
+%=====================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why certification changes the problem}
+The classical formulation of such missions optimizes a scalar trade-off between the probability of
+detection and the time spent. Our results show that when the emitters have unknown directionality this is not merely a modelling preference but a structural necessity: a non-detection
+carries no information about distance, so the ``probability of having missed something'' cannot be
+driven to zero by measuring more densely in the same place. What restores decidability is a
+property of the \emph{geometry of the network}: an emitter of arbitrary orientation is detectable
+exactly when the network surrounds it. This converts an estimation problem into a verification
+problem, and the ablation quantifies the payoff at a factor of $4.8$ in mission time in S2
+(in S1 the raster path already resolves empty channels, so the certificate changes nothing there).
+
+\subsection{Limitations}
+\begin{itemize}
+\item \textbf{Simulation only; no hardware validation.} The study is entirely simulation-based.
+The sensor and timing models are taken from a documented specification and reproduced faithfully,
+and the physical layer is validated against the Cram\'er--Rao bound (Section~\ref{sec:rf}), but no
+physical experiment was performed. A bench demonstration with a software-defined radio and a
+single direction-finding antenna, or a small wheeled platform in an outdoor field, would test the
+modelling assumptions of Section~\ref{sec:problem} directly and is the single most valuable
+extension of this work.
+\item \textbf{Known error bound.} The evidence-set construction requires the angular error bound
+$\delta$ to be known. If the true error exceeds $\delta$ the outer-approximation invariant of
+Lemma~\ref{lem:outer} is violated and the certificate becomes unsound. In practice $\delta$ should
+be estimated conservatively; our generalization experiment shows that the cost of using a bound
+eight times larger than necessary is below $1.5\%$ in S2, which suggests that erring on the safe
+side is cheap.
+\item \textbf{Conservative treatment of the reception radius.} Reasoning with $\Rmin$ everywhere
+is safe but leaves performance on the table when the true radii are large. Estimating the radii
+online from repeated detections is an obvious extension.
+\item \textbf{Propagation model.} The channel is modelled as a point emitter with a half-plane
+radiation pattern, a bounded deterministic bearing error and, in
+Section~\ref{sec:outlier}, independent spurious bearings and missed detections. Real channels add
+multipath fading, shadowing and non-ideal sidelobes whose statistics are site-specific. Our
+robustness analysis covers the two qualitative effects that matter for the certificate --- a false
+detection and a lost detection --- but a calibrated channel model, and in particular the joint
+statistics of correlated outliers along a trajectory, remains to be studied.
+\item \textbf{Obstacles and non-convex workspaces.} The detectability condition and the
+certificate extend to any compact workspace once the visibility relation is made explicit,
+\eqref{eq:conv} becoming the enclosure condition \eqref{eq:visconv} of
+Section~\ref{sec:obstacles}; the network construction of Section~\ref{sec:network} is specific to
+the disk, but Section~\ref{sec:obstacles} shows that it can be repaired in place by greedy
+shadow-filling at a cost of roughly a doubling of the network. The bounds of
+Section~\ref{sec:bounds} --- the arc argument and the swept-area argument --- do not carry over to
+a non-convex region and would have to be re-derived; this is the part of the present work that is
+most clearly incomplete.
+\end{itemize}
+
+\subsection{Future work}
+The most immediate open problem is the one identified in
+Section~\ref{sec:robust}: constructing a network of \emph{minimum tour length} that attains a
+prescribed detection redundancy $r$, so that a mission can be simultaneously safe and decidable
+under a bounded number of spurious readings. A related question is whether redundancy can be
+bought more cheaply by moving the outer ring further out --- where a single point covers a wider
+angular sector for boundary emitters --- than by densifying it in place.
+Three further directions appear promising. First, \emph{adaptive network refinement}: rather than
+fixing the network in advance, points can be added where the detectability condition is closest to
+being violated, which may reduce the number of required measurements below the uniform-lattice
+bound. Second, \emph{multi-robot extension}: the network is a set of locations, so the guarantee
+carries over to a team, and the tour becomes a vehicle-routing problem; the certificate then
+requires that the union of the teams' measurement points satisfies \eqref{eq:conv}. Third,
+\emph{moving emitters}: the evidence set becomes a time-indexed set and the update rules acquire a
+prediction step, at the cost of losing the static absence certificate.
+
+%=====================================================================
+\section{Conclusion}
+We studied the problem of finding and neutralizing an unknown number of radio emitters with
+unknown directionality using a single bearing-only mobile sensor, with the additional
+requirement that the platform be able to certify that none has been missed. We derived a
+necessary and sufficient condition for a measurement network to detect an emitter of arbitrary
+orientation, namely that the emitter lies in the convex hull of the network points within the
+worst-case reception radius, and showed that this implies the network must extend beyond the region
+of interest. Guided by the condition we formulated the network design as a covering-salesman
+problem, proved a point-count lower bound, and obtained a two-layer construction that satisfies the detectability condition --- analytically almost everywhere and numerically on the residual with a $15^\circ$ margin --- with a route $42\%$ shorter than the natural single-layer alternative. The resulting
+certifiable search strategy clears $100\%$ of emitters on 200 Monte-Carlo episodes at
+$359.7\pm44.6$~s per emitter; in a separate $30$-seed comparison the strongest of four baselines
+clears $51\%$ with $12.9$ times the budget and none
+certifies completion in the directional scenario. Ablations attribute the largest single effect to
+the completion certificate, which does not change what is cleared but, in scenario S2, reduces
+mission time by a factor of $4.8$.
+
+%=====================================================================
+\section*{CRediT authorship contribution statement}
+
+\textbf{Changxuan Cao:} Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Writing -- original draft, Writing -- review and editing, Visualization. \textbf{Zexu Ouyang:} Methodology, Software, Validation, Formal analysis, Writing -- review and editing.
+
+\section*{Funding}
+
+This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
+
+\section*{Declaration of competing interest}
+
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+
+\section*{Declaration of generative AI and AI-assisted technologies in the writing process}
+
+During the preparation of this work the authors used a large language model assistant in order
+to check the internal consistency of the manuscript, to verify that the numerical claims match
+the generated data files, and to assist with language editing. After using this tool, the
+authors reviewed and edited the content as needed and take full responsibility for the content
+of the publication.
+
+\section*{Data availability}
+
+The simulator, the search-and-neutralize implementation, the experiment scripts and the generated data that support the findings of this study are available from the corresponding author on reasonable request.
+
+\begin{thebibliography}{99}
+
+\bibitem{torrieri1984}
+D.~J. Torrieri, ``Statistical theory of passive location systems,''
+\emph{IEEE Trans. Aerosp. Electron. Syst.}, vol.~AES-20, no.~2, pp.~183--198, 1984.
+
+\bibitem{gavish1992}
+M.~Gavish and A.~J. Weiss, ``Performance analysis of bearing-only target location algorithms,''
+\emph{IEEE Trans. Aerosp. Electron. Syst.}, vol.~28, no.~3, pp.~817--828, 1992.
+
+\bibitem{bishop2010}
+A.~N. Bishop, B.~Fidan, B.~D. O. Anderson, K.~Do\u{g}an\c{c}ay, and P.~N. Pathirana,
+``Optimality analysis of sensor--target localization geometries,''
+\emph{Automatica}, vol.~46, no.~3, pp.~479--492, 2010.
+
+\bibitem{martinez2006}
+S.~Mart\'inez and F.~Bullo, ``Optimal sensor placement and motion coordination for target
+tracking,'' \emph{Automatica}, vol.~42, no.~4, pp.~661--668, 2006.
+
+\bibitem{chan1994}
+Y.~T. Chan and K.~C. Ho, ``A simple and efficient estimator for hyperbolic location,''
+\emph{IEEE Trans. Signal Process.}, vol.~42, no.~8, pp.~1905--1915, 1994.
+
+\bibitem{ho2004}
+K.~C. Ho and W.~Xu, ``An accurate algebraic solution for moving source location using TDOA and
+FDOA measurements,'' \emph{IEEE Trans. Signal Process.}, vol.~52, no.~9, pp.~2453--2463, 2004.
+
+\bibitem{choset2001}
+H.~Choset, ``Coverage for robotics --- a survey of recent results,''
+\emph{Annals of Mathematics and Artificial Intelligence}, vol.~31, pp.~113--126, 2001.
+
+\bibitem{galceran2013}
+E.~Galceran and M.~Carreras, ``A survey on coverage path planning for robotics,''
+\emph{Robotics and Autonomous Systems}, vol.~61, no.~12, pp.~1258--1276, 2013.
+
+\bibitem{choset1998}
+H.~Choset and P.~Pignon, ``Coverage path planning: The boustrophedon cellular decomposition,''
+in \emph{Field and Service Robotics}, 1998, pp.~203--209.
+
+\bibitem{golden2012}
+B.~Golden, Z.~Naji-Azimi, S.~Raghavan, M.~Salari, and P.~Toth, ``The generalized covering
+salesman problem,'' \emph{INFORMS J. Comput.}, vol.~24, no.~4, pp.~534--553, 2012.
+
+\bibitem{bezdek1983}
+K.~Bezdek, ``\"Uber einige Kreis\"uberdeckungen,'' \emph{Beitr\"age zur Algebra und Geometrie},
+vol.~14, pp.~7--14, 1983.
+
+\bibitem{nica2011}
+A.~Nica, ``Covering a disk with smaller disks,'' M.Math. thesis, University of Waterloo, 2011.
+
+\bibitem{jung1901}
+H.~Jung, ``\"Uber die kleinste Kugel, die eine r\"aumliche Figur einschliesst,''
+\emph{J. Reine Angew. Math.}, vol.~123, pp.~241--257, 1901.
+
+\bibitem{welzl1991}
+E.~Welzl, ``Smallest enclosing disks (balls and ellipsoids),'' in \emph{New Results and New
+Trends in Computer Science}, 1991, pp.~359--370.
+
+\bibitem{vergassola2007}
+M.~Vergassola, E.~Villermaux, and E.~D. Chialvo, ```Infotaxis' as a strategy for searching
+without gradients,'' \emph{Nature}, vol.~445, pp.~406--409, 2007.
+
+\bibitem{stone2007}
+L.~D. Stone, \emph{Theory of Optimal Search}, 2nd ed. INFORMS, 2007.
+
+\bibitem{chung2011}
+T.~H. Chung, G.~A. Hollinger, and V.~Isler, ``Search and pursuit--evasion in mobile robotics: A
+survey,'' \emph{Autonomous Robots}, vol.~31, no.~4, pp.~299--316, 2011.
+
+\bibitem{azuma2012}
+S.~Azuma, M.~S. Sakar, and G.~J. Pappas, ``Stochastic source seeking by mobile robots,''
+\emph{IEEE Trans. Autom. Control}, vol.~57, no.~9, pp.~2308--2321, 2012.
+
+\bibitem{guvensan2011}
+M.~A. Guvensan and A.~G. Yilmaz, ``On coverage issues in directional sensor networks: A survey,''
+\emph{Ad Hoc Networks}, vol.~9, no.~7, pp.~1238--1255, 2011.
+
+\bibitem{milanese1991}
+M.~Milanese and A.~Vicino, ``Optimal estimation theory for dynamic systems with set membership
+uncertainty: An overview,'' \emph{Automatica}, vol.~27, no.~6, pp.~997--1009, 1991.
+
+\bibitem{jaulin2001}
+L.~Jaulin, M.~Kieffer, O.~Didrit, and \'E.~Walter, \emph{Applied Interval Analysis}.
+London, U.K.: Springer, 2001.
+
+\bibitem{chisci1996}
+L.~Chisci, A.~Garulli, and G.~Zappa, ``Recursive state bounding by parallelotopes,''
+\emph{Automatica}, vol.~32, no.~7, pp.~1049--1055, 1996.
+
+\bibitem{alamo2005}
+T.~Alamo, J.~M. Bravo, and E.~F. Camacho, ``Guaranteed state estimation by zonotopes,''
+\emph{Automatica}, vol.~41, no.~6, pp.~1035--1043, 2005.
+
+\bibitem{combastel2003}
+C.~Combastel, ``A state bounding observer based on zonotopes,'' in \emph{Proc. European Control
+Conf. (ECC)}, 2003.
+
+\bibitem{scott2016}
+J.~K. Scott, D.~M. Raimondo, G.~R. Marseglia, and R.~D. Braatz, ``Constrained zonotopes: A new
+tool for set-based estimation and fault detection,'' \emph{Automatica}, vol.~69, pp.~405--413,
+2016.
+
+\bibitem{tan2021}
+C.~S. Tan, R.~Mohd-Mokhtar, and M.~R. Arshad, ``A comprehensive review of coverage path planning
+in robotics using classical and heuristic algorithms,'' \emph{IEEE Access}, vol.~9,
+pp.~119\,270--119\,305, 2021.
+
+\bibitem{cabreira2019}
+T.~M. Cabreira, L.~B. Brisolara, and P.~R. Ferreira~Jr., ``Survey on coverage path planning with
+unmanned aerial vehicles,'' \emph{Drones}, vol.~3, no.~1, art.~4, 2019.
+
+\bibitem{choset2005}
+H.~Choset, K.~M. Lynch, S.~Hutchinson, G.~Kantor, W.~Burgard, L.~E. Kavraki, and S.~Thrun,
+\emph{Principles of Robot Motion: Theory, Algorithms, and Implementations}. Cambridge, MA, USA:
+MIT Press, 2005.
+
+\bibitem{robin2016}
+C.~Robin and S.~Lacroix, ``Multi-robot target detection and tracking: Taxonomy and survey,''
+\emph{Autonomous Robots}, vol.~40, no.~4, pp.~729--760, 2016.
+
+\bibitem{khan2018}
+A.~Khan, B.~Rinner, and A.~Cavallaro, ``Cooperative robots to observe moving targets: Review,''
+\emph{IEEE Trans. Cybern.}, vol.~48, no.~1, pp.~187--198, 2018.
+
+\bibitem{grocholsky2006}
+B.~Grocholsky, J.~Keller, V.~Kumar, and G.~Pappas, ``Cooperative air and ground surveillance,''
+\emph{IEEE Robot. Autom. Mag.}, vol.~13, no.~3, pp.~16--25, 2006.
+
+\bibitem{gonzalez1985}
+T.~F. Gonzalez, ``Clustering to minimize the maximum intercluster distance,''
+\emph{Theoretical Computer Science}, vol.~38, pp.~293--306, 1985.
+
+\bibitem{beardwood1959}
+J.~Beardwood, J.~H. Halton, and J.~M. Hammersley, ``The shortest path through many points,''
+\emph{Proc. Cambridge Philos. Soc.}, vol.~55, no.~4, pp.~299--327, 1959.
+
+\bibitem{applegate2006}
+D.~L. Applegate, R.~E. Bixby, V.~Chv\'atal, and W.~J. Cook, \emph{The Traveling Salesman
+Problem: A Computational Study}. Princeton, NJ, USA: Princeton Univ. Press, 2006.
+
+\bibitem{koopman1980}
+B.~O. Koopman, \emph{Search and Screening: General Principles with Historical Applications}.
+New York, NY, USA: Pergamon Press, 1980.
+
+\bibitem{thrun2005}
+S.~Thrun, W.~Burgard, and D.~Fox, \emph{Probabilistic Robotics}. Cambridge, MA, USA: MIT Press,
+2005.
+
+\bibitem{schmidt1986}
+R.~O. Schmidt, ``Multiple emitter location and signal parameter estimation,''
+\emph{IEEE Trans. Antennas Propag.}, vol.~34, no.~3, pp.~276--280, 1986.
+
+\bibitem{krim1996}
+H.~Krim and M.~Viberg, ``Two decades of array signal processing research: The parametric
+approach,'' \emph{IEEE Signal Process. Mag.}, vol.~13, no.~4, pp.~67--94, 1996.
+
+\bibitem{preparata1985}
+F.~P. Preparata and M.~I. Shamos, \emph{Computational Geometry: An Introduction}. Springer, 1985.
+
+\bibitem{megiddo1983}
+N.~Megiddo, ``Linear-time algorithms for linear programming in $R^3$ and related problems,''
+\emph{SIAM J. Comput.}, vol.~12, no.~4, pp.~759--776, 1983.
+
+\bibitem{boyd2004}
+S.~Boyd and L.~Vandenberghe, \emph{Convex Optimization}. Cambridge Univ. Press, 2004.
+
+\bibitem{toth1998}
+G.~T\'oth, ``Covering a plane convex body by smaller homothetic copies,''
+\emph{Discrete Mathematics}, vol.~187, no.~1--3, pp.~281--285, 1998.
+
+\bibitem{popovic2024}
+M.~Popovi\'c, J.~Ott, J.~R\"uckin, and M.~J.~Kochenderfer, ``Learning-based methods for adaptive
+informative path planning,'' \emph{Robotics and Autonomous Systems}, vol.~179, art.~104727, 2024,
+doi:10.1016/j.robot.2024.104727.
+
+\bibitem{kudyba2024}
+P.~S. Kudyba, Q.~Lu, and H.~Sun, ``Bayesian optimization for fast radio mapping and
+localization with an autonomous aerial drone,'' in \emph{Proc. IEEE Veh. Technol. Conf.
+(VTC2024-Fall)}, 2024, doi:10.1109/VTC2024-Fall63153.2024.10757589.
+
+\bibitem{vashisth2026}
+A.~Vashisth, M.~Kulshrestha, D.~Conover, and A.~Bera, ``Scalable multi-robot informative path
+planning for target mapping via deep reinforcement learning,'' \emph{IEEE Robot. Autom. Lett.},
+vol.~11, no.~3, pp.~3414--3421, 2026.
+
+\bibitem{ibenthal2023}
+J.~Ibenthal, L.~Meyer, H.~Piet-Lahanier, and M.~Kieffer, ``Localization of partially hidden
+moving targets using a fleet of UAVs via bounded-error estimation,'' \emph{IEEE Trans.
+Robotics}, vol.~39, no.~6, pp.~4211--4229, 2023.
+
+\bibitem{peng2024}
+J.~Peng, Q.~Wang, B.~Jin, Y.~Zhang, and K.~Lu, ``Trajectory optimization to enhance
+observability for bearing-only target localization and sensor bias calibration,''
+\emph{Biomimetics}, vol.~9, no.~9, art.~510, 2024, doi:10.3390/biomimetics9090510.
+
+\bibitem{kim2025}
+S.~Kim, S.~Moon, I.~Petrunin, H.-S.~Shin, and S.~Khattak, ``Autonomous robotic radio source
+localization via a novel Gaussian mixture filtering approach,'' in \emph{Proc. Int. Conf.
+Inf. Fusion (FUSION)}, 2025, doi:10.23919/FUSION65864.2025.11124026.
+
+\end{thebibliography}
+
+\end{document}
+

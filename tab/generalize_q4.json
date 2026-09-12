@@ -1,0 +1,202 @@
+[
+ {
+  "dim": "k",
+  "value": "10",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 835.1178752905595,
+  "avg_time_std": 15.316350916494294,
+  "total_time": 8351.178752905596,
+  "n_sources_mean": 10.0
+ },
+ {
+  "dim": "k",
+  "value": "12",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 703.2784077239386,
+  "avg_time_std": 13.022854671292958,
+  "total_time": 8439.340892687262,
+  "n_sources_mean": 12.0
+ },
+ {
+  "dim": "k",
+  "value": "14",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 617.2297938394815,
+  "avg_time_std": 19.520434366288708,
+  "total_time": 8641.217113752742,
+  "n_sources_mean": 14.0
+ },
+ {
+  "dim": "k",
+  "value": "16",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 554.6655704947076,
+  "avg_time_std": 19.52060856848127,
+  "total_time": 8874.649127915322,
+  "n_sources_mean": 16.0
+ },
+ {
+  "dim": "rc",
+  "value": "fixed 1000 (最坏)",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 617.5353891207167,
+  "avg_time_std": 72.36603566620354,
+  "total_time": 8653.062174783081,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "rc",
+  "value": "fixed 1500 (最好)",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 616.6033457465887,
+  "avg_time_std": 71.82695174500637,
+  "total_time": 8640.529771236037,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "rc",
+  "value": "uniform[1000,1500]",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 616.6829123511959,
+  "avg_time_std": 71.84753164108822,
+  "total_time": 8641.633819070099,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "dir",
+  "value": "0.0",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 616.6829123511959,
+  "avg_time_std": 71.84753164108822,
+  "total_time": 8641.633819070099,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "dir",
+  "value": "0.25",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 624.2765048479506,
+  "avg_time_std": 73.91264472713667,
+  "total_time": 8743.39423787126,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "dir",
+  "value": "0.5",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 629.8453231458838,
+  "avg_time_std": 74.53234889451527,
+  "total_time": 8821.98801285414,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "dir",
+  "value": "0.75",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 632.0211716935723,
+  "avg_time_std": 70.17962542573656,
+  "total_time": 8864.40454076235,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "dir",
+  "value": "1.0",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 634.2245828166637,
+  "avg_time_std": 73.25385046920869,
+  "total_time": 8886.891738910437,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "delta",
+  "value": "0.25",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 616.5002034790466,
+  "avg_time_std": 71.49492254697783,
+  "total_time": 8639.57516566672,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "delta",
+  "value": "0.5",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 616.5117022156168,
+  "avg_time_std": 71.50949934089232,
+  "total_time": 8639.715655116821,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "delta",
+  "value": "1.0",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 616.6829123511959,
+  "avg_time_std": 71.84753164108822,
+  "total_time": 8641.633819070099,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "delta",
+  "value": "2.0",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 624.7529074624096,
+  "avg_time_std": 72.27410664894234,
+  "total_time": 8755.02673478911,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "cell",
+  "value": "10.0",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 616.6829123511959,
+  "avg_time_std": 71.84753164108822,
+  "total_time": 8641.633819070099,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "cell",
+  "value": "15.0",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 616.8465073489176,
+  "avg_time_std": 71.63527208894018,
+  "total_time": 8644.296769453413,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "cell",
+  "value": "20.0",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 617.4660864689794,
+  "avg_time_std": 72.1669868134756,
+  "total_time": 8652.081267193898,
+  "n_sources_mean": 14.2
+ },
+ {
+  "dim": "cell",
+  "value": "5.0",
+  "clear_ratio": 1.0,
+  "certified": 1.0,
+  "avg_time": 616.5384541469691,
+  "avg_time_std": 71.53665756068146,
+  "total_time": 8640.051264445705,
+  "n_sources_mean": 14.2
+ }
+]

@@ -1,0 +1,12 @@
+问题1 出图 ...
+  图已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\figs\q1_wedge_model.png
+  图已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\figs\q1_region_vs_gamma.png
+  表已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\tab\q1_region_vs_gamma.csv
+  图已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\figs\q1_diameter_map.png
+  表已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\tab\q1_diameter_map.csv
+  图已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\figs\q1_cover.png
+  表已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\tab\q1_cover_stats.csv
+     n=2 覆盖率=99.04%  R*/(D/2) 均值=1.000115 最大=1.031182
+     n=3 覆盖率=98.56%  R*/(D/2) 均值=1.000115 最大=1.026850
+     n=4 覆盖率=98.07%  R*/(D/2) 均值=1.000181 最大=1.034272
+完成

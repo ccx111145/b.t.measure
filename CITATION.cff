@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use this code or data, please cite the paper below."
+title: "Certifiable Search and Neutralization of Radio Emitters with Unknown Directionality"
+abstract: >-
+  Reference implementation, discrete-event simulator, experiment scripts and generated
+  data for a certifiable search framework in which a bearing-only mobile sensor locates
+  and neutralizes radio emitters of unknown directionality and proves that none remains.
+type: software
+authors:
+  - family-names: Cao
+    given-names: Changxuan
+    affiliation: "East China University of Technology, Nanchang, Jiangxi 330013, China"
+    orcid: ""
+  - family-names: Ouyang
+    given-names: Zexu
+    affiliation: "East China University of Technology, Nanchang, Jiangxi 330013, China"
+    orcid: ""
+contact:
+  - family-names: Cao
+    given-names: Changxuan
+    email: "2023211904@ecut.edu.cn"
+license: MIT
+license-url: "https://opensource.org/licenses/MIT"
+keywords:
+  - bearing-only localization
+  - guaranteed search
+  - covering salesman problem
+  - directional emitters
+  - radio-frequency interference
+  - mobile sensors
+  - certifiable coverage
+version: "1.0.0"
+date-released: "2026-09-12"

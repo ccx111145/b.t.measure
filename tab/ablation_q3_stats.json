@@ -1,0 +1,44 @@
+{
+ "Full": {
+  "clear_ratio_mean": 1.0,
+  "certified_mean": 1.0,
+  "avg_time_mean": 342.26411827569,
+  "virtual_time_mean": 4637.182661519438,
+  "actions_mean": 171.46666666666667
+ },
+ "A1-no-feasible": {
+  "clear_ratio_mean": 0.4196470196470196,
+  "certified_mean": 0.0,
+  "avg_time_mean": 861.4204426823562,
+  "virtual_time_mean": 4345.174374581256,
+  "actions_mean": 158.73333333333332
+ },
+ "A2-no-mec": {
+  "clear_ratio_mean": 1.0,
+  "certified_mean": 1.0,
+  "avg_time_mean": 420.1917904276369,
+  "virtual_time_mean": 5703.3323336756985,
+  "actions_mean": 219.2
+ },
+ "A3-no-certify": {
+  "clear_ratio_mean": 1.0,
+  "certified_mean": 1.0,
+  "avg_time_mean": 342.26411827569,
+  "virtual_time_mean": 4637.182661519438,
+  "actions_mean": 171.46666666666667
+ },
+ "A5-no-probe": {
+  "clear_ratio_mean": 1.0,
+  "certified_mean": 1.0,
+  "avg_time_mean": 342.8468828181225,
+  "virtual_time_mean": 4645.617550265927,
+  "actions_mean": 175.3
+ },
+ "A6-no-sweep": {
+  "clear_ratio_mean": 1.0,
+  "certified_mean": 1.0,
+  "avg_time_mean": 342.26411827569,
+  "virtual_time_mean": 4637.182661519438,
+  "actions_mean": 171.46666666666667
+ }
+}

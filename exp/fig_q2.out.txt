@@ -1,0 +1,10 @@
+
+  图已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\figs\q2_F1_candidate.png
+  图已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\figs\q2_worst_diam_map.png
+  表已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\tab\q2_worst_diam_map.csv
+  图已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\figs\q2_pareto.png
+  表已保存: R:\claude\bitget_grid\国赛路嗯嗯\B题\tab\q2_recommend.csv
+    R_lo=1000 m  ψ_max=40.44°(闭式 40.81°)  ψ*=-40°  d*=1000 m  最坏直径=143.0 m  d∈[954, 1004]  移动 200 s
+    R_lo=1250 m  ψ_max=55.44°(闭式 55.44°)  ψ*=25°  d*=1200 m  最坏直径=100.3 m  d∈[285, 1254]  移动 240 s
+    R_lo=1500 m  ψ_max=89.00°(闭式 89.00°)  ψ*=-40°  d*=1500 m  最坏直径=82.5 m  d∈[0, 1504]  移动 300 s
+

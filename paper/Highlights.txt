@@ -1,0 +1,9 @@
+Highlights
+Certifiable Search and Neutralization of Radio Emitters with Unknown Directionality Using a Bearing-Only Mobile Sensor
+Changxuan Cao, Zexu Ouyang
+
+Detectability of orientation-unknown emitters requires enclosure, not coverage.
+A certifiable search framework proves completion instead of timing out.
+The completion certificate alone reduces mission time by a factor of 4.8.
+A sample-level array chain is benchmarked against the Cramer-Rao bound.
+Under multipath, antenna aperture dominates signal-to-noise ratio.

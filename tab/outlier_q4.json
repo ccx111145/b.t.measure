@@ -1,0 +1,122 @@
+[
+ {
+  "p_outlier": 0.0,
+  "q": 0,
+  "n": 12,
+  "full_clear": 1.0,
+  "false_empty": 0,
+  "certified": 1.0,
+  "virtual_time_mean": 9043.922881761328,
+  "n_outlier": 0
+ },
+ {
+  "p_outlier": 0.0,
+  "q": 2,
+  "n": 12,
+  "full_clear": 0.9166666666666666,
+  "false_empty": 0,
+  "certified": 0.9166666666666666,
+  "virtual_time_mean": 15722.56667072515,
+  "n_outlier": 0
+ },
+ {
+  "p_outlier": 0.0,
+  "q": 4,
+  "n": 12,
+  "full_clear": 0.75,
+  "false_empty": 0,
+  "certified": 0.75,
+  "virtual_time_mean": 33808.64079935956,
+  "n_outlier": 0
+ },
+ {
+  "p_outlier": 0.02,
+  "q": 0,
+  "n": 12,
+  "full_clear": 0.0,
+  "false_empty": 79,
+  "certified": 0.0,
+  "virtual_time_mean": 9114.899887967129,
+  "n_outlier": 145
+ },
+ {
+  "p_outlier": 0.02,
+  "q": 2,
+  "n": 12,
+  "full_clear": 0.16666666666666666,
+  "false_empty": 0,
+  "certified": 0.0,
+  "virtual_time_mean": 23253.962304596513,
+  "n_outlier": 233
+ },
+ {
+  "p_outlier": 0.02,
+  "q": 4,
+  "n": 12,
+  "full_clear": 0.8333333333333334,
+  "false_empty": 0,
+  "certified": 0.0,
+  "virtual_time_mean": 44981.57473290807,
+  "n_outlier": 279
+ },
+ {
+  "p_outlier": 0.05,
+  "q": 0,
+  "n": 12,
+  "full_clear": 0.0,
+  "false_empty": 115,
+  "certified": 0.0,
+  "virtual_time_mean": 8381.351886566144,
+  "n_outlier": 225
+ },
+ {
+  "p_outlier": 0.05,
+  "q": 2,
+  "n": 12,
+  "full_clear": 0.0,
+  "false_empty": 0,
+  "certified": 0.0,
+  "virtual_time_mean": 21501.00446733613,
+  "n_outlier": 438
+ },
+ {
+  "p_outlier": 0.05,
+  "q": 4,
+  "n": 12,
+  "full_clear": 0.4166666666666667,
+  "false_empty": 0,
+  "certified": 0.0,
+  "virtual_time_mean": 41434.32827203744,
+  "n_outlier": 564
+ },
+ {
+  "p_outlier": 0.1,
+  "q": 0,
+  "n": 12,
+  "full_clear": 0.0,
+  "false_empty": 158,
+  "certified": 0.0,
+  "virtual_time_mean": 5937.871140022606,
+  "n_outlier": 344
+ },
+ {
+  "p_outlier": 0.1,
+  "q": 2,
+  "n": 12,
+  "full_clear": 0.0,
+  "false_empty": 0,
+  "certified": 0.0,
+  "virtual_time_mean": 16712.611724829312,
+  "n_outlier": 726
+ },
+ {
+  "p_outlier": 0.1,
+  "q": 4,
+  "n": 12,
+  "full_clear": 0.25,
+  "false_empty": 0,
+  "certified": 0.0,
+  "virtual_time_mean": 34438.50399399957,
+  "n_outlier": 950
+ }
+]
