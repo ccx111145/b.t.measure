@@ -72,7 +72,7 @@ exp/       experiments, figure generation, independent verification scripts
 dev/       test suites, self-check, network-optimization helpers
 tab/       all generated data (CSV for raw runs, JSON for summaries)
 figs/      the vector figures used in the paper
-paper/     LaTeX sources of both manuscript versions + the Highlights file
+paper/     LaTeX sources of both manuscript versions + Highlights.txt (standalone)
 docs/      reproduction map and the limits of the certificate
 ```
 
