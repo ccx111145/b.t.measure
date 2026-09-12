@@ -64,8 +64,9 @@ sufficient condition for a network to detect an emitter of arbitrary orientation
 $G\in\conv(S_G)$, which forces the network beyond the region. We build a certifiable search
 framework in which every channel ends cleared or proved empty, making termination decidable rather
 than a timeout, and cast network design as a covering-salesman problem with a rigorous point-count
-lower bound; a two-layer construction needs $25$ points on a route $42\%$ shorter than a
-single-layer lattice. On $200$ Monte-Carlo episodes it clears $100\%$ of emitters at
+lower bound; a two-layer construction uses $25$ points on a route $42\%$ shorter than a
+single-layer lattice. On $200$ Monte-Carlo episodes in the omni-directional scenario it
+clears $100\%$ of emitters at
 $359.7\pm44.6$~s each; in a separate $30$-seed comparison the best of four baselines clears $51\%$
 with $12.9$ times the budget and none certifies completion in the directional scenario. Ablating
 the certificate leaves what is cleared unchanged but cuts mission time $4.8$-fold. Under multipath

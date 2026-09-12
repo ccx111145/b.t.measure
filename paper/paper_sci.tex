@@ -53,8 +53,9 @@ sufficient condition for a network to detect an emitter of arbitrary orientation
 $G\in\conv(S_G)$, which forces the network beyond the region. We build a certifiable search
 framework in which every channel ends cleared or proved empty, making termination decidable rather
 than a timeout, and cast network design as a covering-salesman problem with a rigorous point-count
-lower bound; a two-layer construction needs $25$ points on a route $42\%$ shorter than a
-single-layer lattice. On $200$ Monte-Carlo episodes it clears $100\%$ of emitters at
+lower bound; a two-layer construction uses $25$ points on a route $42\%$ shorter than a
+single-layer lattice. On $200$ Monte-Carlo episodes in the omni-directional scenario it
+clears $100\%$ of emitters at
 $359.7\pm44.6$~s each; in a separate $30$-seed comparison the best of four baselines clears $51\%$
 with $12.9$ times the budget and none certifies completion in the directional scenario. Ablating
 the certificate leaves what is cleared unchanged but cuts mission time $4.8$-fold. Under multipath
@@ -2031,7 +2032,7 @@ The authors declare that they have no known competing financial interests or per
 During the preparation of this work the authors used a large language model assistant in order to check the internal consistency of the manuscript, to verify that the numerical claims match the generated data files, and to assist with language editing. After using this tool, the authors reviewed and edited the content as needed and take full responsibility for the content of the publication.
 
 \noindent\textbf{Data availability.}
-The simulator, the search-and-neutralize implementation, the experiment scripts and the generated data that support the findings of this study are available from the corresponding author on reasonable request.
+The simulator, the search-and-neutralize implementation, the experiment scripts and the generated data that support the findings of this study are openly available at \url{https://github.com/ccx111145/b.t.measure}.
 
 \begin{thebibliography}{99}
 
