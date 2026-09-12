@@ -29,5 +29,6 @@ keywords:
   - radio-frequency interference
   - mobile sensors
   - certifiable coverage
+repository-code: "https://github.com/ccx111145/certifiable-emitter-search"
 version: "1.0.0"
 date-released: "2026-09-12"

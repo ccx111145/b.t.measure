@@ -6,7 +6,9 @@ paper:
 > **Certifiable Search and Neutralization of Radio Emitters with Unknown Directionality Using a
 > Bearing-Only Mobile Sensor**
 > Changxuan Cao, Zexu Ouyang — East China University of Technology, Nanchang, Jiangxi, China
-> *(submitted to Robotics and Autonomous Systems)*
+> *(submitted to Robotics and Autonomous Systems)
+
+**Code and data:** <https://github.com/ccx111145/certifiable-emitter-search>*
 
 ---
 
